@@ -129,39 +129,49 @@ npm run start -- -H 0.0.0.0 -p 3000
 
 ## 环境变量
 
-`.env.example` 中包含当前项目支持的主要配置：
+⚠️ **首次运行前必须创建 `.env` 文件：** `cp .env.example .env`
 
-```env
-DATABASE_URL="file:./dev.db"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-RUNWAYML_API_SECRET=""
+仓库里**不包含**任何 API Key。如果你要使用 AI 功能（剧本生成、图片生成），需要自己申请并填入。
 
-AI_TEXT_PROVIDER="openai-compatible"
-AI_API_KEY=""
-AI_BASE_URL="https://api.openai.com/v1"
-AI_MODEL=""
-AI_TEMPERATURE="0.7"
-AI_REQUEST_TIMEOUT_MS="60000"
-AI_FALLBACK_MODE="mock"
+### 变量速查表
 
-IMAGE_PROVIDER="volcengine-seedream"
-IMAGE_API_KEY=""
-IMAGE_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
-IMAGE_MODEL=""
-IMAGE_SIZE="1600x2848"
-IMAGE_RESPONSE_FORMAT="url"
-IMAGE_WATERMARK="false"
-IMAGE_GENERATION_CONCURRENCY="3"
-```
+#### 基础配置（无需申请，直接用）
 
-重要说明：
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `DATABASE_URL` | `file:./dev.db` | SQLite 数据库路径，无需改动 |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | 本地开发不变；域名部署时改为 `https://你的域名` |
 
-- `DATABASE_URL` 默认指向 SQLite。相对路径 `file:./dev.db` 会在 Prisma 目录下生成 `prisma/dev.db`。
-- `NEXT_PUBLIC_APP_URL` 本地开发使用 `http://localhost:3000`，域名部署时改成 `https://你的域名`。
-- `AI_TEXT_PROVIDER` 支持 `openai-compatible`、`mock`、`dynamic-mock`。
-- `AI_FALLBACK_MODE=mock` 时，文本模型失败会使用动态 mock 兜底；设为 `error` 时会直接报错。
-- `IMAGE_GENERATION_CONCURRENCY` 控制图片生成并发，代码中限制在 1 到 6 之间。
-- `.env` 不能提交或公开，里面可能包含真实 API Key。
+#### 文本生成（生成剧本 / 资产 / 分镜）
+
+| 变量 | 说明 | 申请渠道 |
+|------|------|----------|
+| `AI_API_KEY` | 文本模型 API Key | [小米 MiMo 平台](https://token-plan-cn.xiaomimimo.com) |
+| `AI_BASE_URL` | API 地址 | `https://token-plan-cn.xiaomimimo.com/v1` |
+| `AI_MODEL` | 模型名 | `mimo-v2.5-pro` |
+| `AI_TEMPERATURE` | 生成随机度 | `0.7`（默认） |
+| `AI_FALLBACK_MODE` | 失败处理 | `mock`（无 key 也能跑，返回模拟数据）；`error`（失败即报错） |
+
+> 也支持任何兼容 OpenAI `/v1/chat/completions` 的服务商（DeepSeek、OpenAI 等），替换 `AI_BASE_URL` 和 `AI_MODEL` 即可。
+
+#### 图片生成（生成角色 / 场景 / 道具 / 分镜图）
+
+| 变量 | 说明 | 申请渠道 |
+|------|------|----------|
+| `IMAGE_API_KEY` | 图片模型 API Key | [火山引擎 Ark](https://console.volcengine.com/ark) → 开通 Seedream 4.5 |
+| `IMAGE_MODEL` | 模型 ID | 火山引擎控制台获取 |
+| `IMAGE_SIZE` | 输出尺寸 | `1600x2848`（默认竖屏 9:16） |
+| `IMAGE_GENERATION_CONCURRENCY` | 并发数 | `3`（1-6 之间） |
+
+### 不配 AI Key 能跑吗？
+
+能。文本生成切到 `mock` 模式后，项目完全可用——只是生成的剧本/分镜是模拟数据。图片生成没有 mock，相关任务会报错，但不影响其他功能。
+
+### 安全提醒
+
+- `.env` 包含你的 API Key，**永远不要**提交到 GitHub 或通过微信/网盘直接发给别人。
+- 分享项目时只发 `.env.example`，让对方自己填 key。
+- 定期检查 API 用量，发现异常消费及时更换 key。
 
 ## 文本生成大模型
 
