@@ -1,0 +1,13 @@
+▲ Next.js 16.2.5 (Turbopack)
+- Local:         http://127.0.0.1:3010
+- Network:       http://127.0.0.1:3010
+- Environments: .env
+✓ Ready in 272ms
+Creating turbopack project { dir: 'D:\\AMJ\\demo5.9', testMode: true }
+
+ GET / 200 in 203ms (next.js: 91ms, application-code: 113ms)
+ POST /api/auth/register 200 in 72ms (next.js: 51ms, application-code: 21ms)
+ POST /api/projects 201 in 38ms (next.js: 18ms, application-code: 20ms)
+ POST /api/generation/story 202 in 20.6s (next.js: 17ms, application-code: 20.6s)
+ GET /api/tasks/cmp1xmuu90006iiccddvqxzvk 200 in 527ms (next.js: 502ms, application-code: 25ms)
+ GET /api/projects/cmp1xmeyu0002iicca9chk6d2 200 in 513ms (next.js: 505ms, application-code: 8ms)

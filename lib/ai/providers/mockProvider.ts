@@ -1,279 +1,315 @@
-type ProjectContext = {
-  title?: string;
-  type?: string;
-  aspectRatio?: string;
-  durationTarget?: string;
-  stylePreset?: string;
+import { AssetInput, GeneratedAsset, GeneratedScript, GeneratedStoryboard, ProjectContext, StoryboardInput } from "@/lib/ai/types";
+
+const defaultIdea = "一个普通人在关键一天遇到意外机会，必须做出选择并完成成长。";
+
+const namePool = ["阿澈", "小禾", "林遥", "星野", "安安", "墨白", "南栀", "小满", "晴川", "洛宁"];
+const companionPool = ["岚岚", "圆圆", "启明", "阿蓝", "白露", "小舟", "可可", "青芽", "塔塔", "夏一"];
+const obstaclePool = ["旧规则", "误解", "失控系统", "时间限制", "隐藏对手", "内心犹豫", "突发风暴", "家族约定"];
+
+type PlotSection = {
+  label: string;
+  text: string;
 };
 
-type AssetInput = {
-  name: string;
-  assetType: string;
-};
-
-type StoryboardInput = {
-  id?: string;
-  shotNo: number;
-  sceneName: string;
-  visualDescription: string;
-  dialogue?: string;
-  durationSeconds: number;
-};
-
-const fanzhaImages = {
-  livingRoom: "/assets/fanzha/场景1.jpg",
-  xiaodai: "/assets/fanzha/角色1.jpg",
-  scamFox: "/assets/fanzha/角色2.jpg",
-  milkTeaShop: "/assets/fanzha/场景2.jpg"
-};
-
-const fanzhaVideos = [
-  "/assets/fanzha/分镜1.mp4",
-  "/assets/fanzha/分镜2.mp4",
-  "/assets/fanzha/分镜3.mp4",
-  "/assets/fanzha/分镜4.mp4"
-];
-
-const fallbackImages = [fanzhaImages.livingRoom, fanzhaImages.xiaodai, fanzhaImages.scamFox, fanzhaImages.milkTeaShop];
-
-const defaultIdea =
-  "呆萌小男孩小呆连续遇到红包链接和扫码领红包骗局，在关键一秒识破套路，记住陌生链接不乱点，不明二维码不扫描。";
-
-const scriptBody = `主题定位：
-以儿童和家庭反诈教育为核心，用轻松漫画风短视频展示“陌生红包链接”“扫码领福利”“不明二维码诱导”等常见骗局，让观众在简单故事中学会：不乱点链接、不随便扫码、不轻信免费福利、遇到可疑情况及时停止操作。
-
-主要角色：
-1. 小呆：穿蓝色小熊卫衣的小男孩，性格呆萌、好奇，容易被红包和福利吸引，但关键时刻能清醒判断，主动拒绝风险操作。
-2. 诈骗精：狐狸形象，穿紫色马甲，表情狡猾夸张，躲在广告牌后诱导小呆扫码，代表生活中常见的网络诈骗和扫码陷阱。
-
-剧情结构：
-开端：晚上，小呆坐在暖黄色客厅里刷手机。手机突然“叮”一声亮起，屏幕弹出一个红包图标，提示他点击领取。小呆眼睛发亮，伸手准备点开链接。
-就在指尖快碰到屏幕时，手机弹出蓝色盾牌气泡。小呆一愣，立刻收回手，清醒地摇头说：“不对！陌生链接不乱点！”
-
-发展：小呆锁屏起身出门。画面从暖黄客厅滑动转场到街道，整体色调逐渐转冷。小呆路过街角奶茶店，被门口的广告牌吸引。
-广告牌上写着“扫码领红包，秒到账”。这时，诈骗精从广告牌后探出头，露出坏笑，诱导小呆：“用手机扫一下，红包秒到账～”
-小呆微微停顿，下意识重复：“用手机扫一下……”
-
-转折：小呆掏出手机，对准广告牌上的二维码。镜头切到手机屏幕特写，二维码即将被识别。
-就在这一刻，小呆瞳孔一缩，突然意识到不对。画面急速拉远并轻微晃动，小呆猛地收回手机，按下锁屏键，挺直背脊，眼神变得坚定。
-
-高潮：小呆大声喊道：“停！不明二维码不扫描！”
-诈骗精瞬间崩溃，双手抱头大喊：“啊——我的业绩！”随后像泄了气一样蔫成毛球，从画面一侧滚出。
-小呆摆摆手，大步离开，成功避开扫码陷阱。
-
-结尾：镜头仰拍小呆离开的背影，并缓缓上摇到天空。彩色标语从天而降，正能量音乐进入高潮。
-旁白响起：“反诈口诀刻心里，守住钱袋笑嘻嘻！”
-画面定格在反诈标语上：陌生链接不乱点，不明二维码不扫描，反诈口诀刻心里，守住钱袋笑嘻嘻。
-
-关键对白：
-小呆：“不对！陌生链接不乱点！”
-诈骗精：“用手机扫一下，红包秒到账～”
-小呆：“用手机扫一下……”
-小呆：“停！不明二维码不扫描！”
-诈骗精：“啊——我的业绩！”
-旁白：“反诈口诀刻心里，守住钱袋笑嘻嘻！”`;
-
-const storyboards = [
-  {
-    shotNo: 1,
-    sceneName: "居家客厅 / 陌生红包链接",
-    charactersJson: ["小呆"],
-    visualDescription:
-      "小呆在暖黄漫画风客厅刷手机，屏幕突然亮起红包图标。小呆眼睛发亮伸手准备点击，指尖悬停时手机弹出盾牌气泡，小呆一愣后猛地收回手。",
-    dialogue: "小呆：不对！陌生链接不乱点！",
-    cameraMovement: "俯拍缓推进入客厅氛围，快速推近手机屏幕，再切到小呆清醒摇头的表情",
-    durationSeconds: 6,
-    imagePrompt: "儿童反诈漫画风，暖黄色客厅，手机红包链接弹出，蓝色盾牌气泡，小呆及时停手",
-    imageUrl: fanzhaImages.livingRoom,
-    videoUrl: fanzhaVideos[0],
-    status: "draft"
-  },
-  {
-    shotNo: 2,
-    sceneName: "客厅转街道 / 扫码诱导出现",
-    charactersJson: ["小呆", "诈骗精"],
-    visualDescription:
-      "小呆锁屏起身，画面从客厅滑动转场到冷调街道和奶茶店。奶茶店门口广告牌吸引小呆注意，诈骗精从广告牌后探头坏笑，诱导小呆扫码领红包。",
-    dialogue: "诈骗精：用手机扫一下，红包秒到账～ 小呆：用手机扫一下……",
-    cameraMovement: "低角度跟拍小呆起身出门，滑动转场至奶茶店，镜头定格广告牌和诈骗精探头动作",
-    durationSeconds: 11,
-    imagePrompt: "儿童反诈漫画风，街角奶茶店，扫码领红包广告牌，狐狸诈骗精探头坏笑",
-    imageUrl: fanzhaImages.milkTeaShop,
-    videoUrl: fanzhaVideos[1],
-    status: "draft"
-  },
-  {
-    shotNo: 3,
-    sceneName: "奶茶店门口 / 不明二维码识破",
-    charactersJson: ["小呆", "诈骗精"],
-    visualDescription:
-      "小呆拿手机对准广告牌二维码，手机屏幕即将识别。小呆突然瞳孔一缩，猛地收回手机并锁屏，挺直背脊，坚定拒绝扫码。诈骗精当场崩溃。",
-    dialogue: "小呆：停！不明二维码不扫描！ 诈骗精：啊——我的业绩！",
-    cameraMovement: "手机屏幕特写对准二维码，随后急速拉远并轻微晃动，最后定格小呆锐利侧脸和诈骗精崩溃反应",
-    durationSeconds: 10,
-    imagePrompt: "儿童反诈漫画风，手机对准二维码，小呆突然警觉锁屏，狐狸诈骗精崩溃",
-    imageUrl: fanzhaImages.milkTeaShop,
-    videoUrl: fanzhaVideos[2],
-    status: "draft"
-  },
-  {
-    shotNo: 4,
-    sceneName: "奶茶店外阳光下 / 反诈口诀收束",
-    charactersJson: ["小呆", "诈骗精"],
-    visualDescription:
-      "小呆摆手大步离开，诈骗精像泄气一样蔫成毛球滚出画面。镜头上摇至天空，彩色反诈标语从天而降，完成正向收束。",
-    dialogue: "旁白：反诈口诀刻心里，守住钱袋笑嘻嘻！",
-    cameraMovement: "仰拍小呆背影慢推，切到诈骗精滚走，再上摇至天空，定格在反诈提醒画面",
-    durationSeconds: 9,
-    imagePrompt: "儿童反诈漫画风，奶茶店外阳光，小呆离开，诈骗精泄气滚走，彩色反诈标语",
-    imageUrl: fanzhaImages.milkTeaShop,
-    videoUrl: fanzhaVideos[3],
-    status: "draft"
-  }
-];
-
-function cleanIdea(idea: string) {
-  return idea.trim() || defaultIdea;
+function cleanIdea(idea?: string) {
+  return idea?.trim() || defaultIdea;
 }
 
-function pick<T>(list: T[], index: number) {
-  return list[index % list.length];
+function hashText(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function pick<T>(items: T[], seed: number) {
+  return items[seed % items.length];
+}
+
+function compact(value: string, length: number) {
+  const text = value.replace(/\s+/g, "").replace(/[《》「」“”"'，。！？、：；,.!?;:]/g, "");
+  if (!text) {
+    return "新故事";
+  }
+  return text.length > length ? text.slice(0, length) : text;
+}
+
+function hasLegacyDefault(project?: ProjectContext) {
+  return !project?.title || (project.title.includes("反诈") && project.title.includes("守护"));
+}
+
+function inferTone(idea: string, project?: ProjectContext) {
+  const source = `${idea} ${project?.stylePreset || ""}`;
+  if (/科幻|星球|宇宙|机器人|赛博|未来/.test(source)) {
+    return {
+      genre: "科幻冒险",
+      world: "霓虹与机械光交织的未来城市",
+      prop: "发光核心装置",
+      theme: "在技术和情感之间找到真正的方向"
+    };
+  }
+  if (/魔法|奇幻|精灵|龙|异世界|森林/.test(source)) {
+    return {
+      genre: "奇幻成长",
+      world: "被古老传说守护的奇幻小镇",
+      prop: "会回应心愿的旧徽章",
+      theme: "相信善意，也学会承担选择的代价"
+    };
+  }
+  if (/悬疑|侦探|谜|案件|推理/.test(source)) {
+    return {
+      genre: "悬疑解谜",
+      world: "雨夜灯牌闪烁的街区",
+      prop: "留下线索的旧照片",
+      theme: "在混乱线索中守住判断和信任"
+    };
+  }
+  if (/治愈|家庭|朋友|校园|温暖|日常/.test(source)) {
+    return {
+      genre: "治愈日常",
+      world: "阳光柔和的街角与小屋",
+      prop: "写满约定的便签本",
+      theme: "用一次小小行动修复关系"
+    };
+  }
+
+  return {
+    genre: project?.type === "education" ? "知识成长短片" : "成长冒险",
+    world: "充满生活细节和戏剧张力的近未来城市",
+    prop: "象征目标的关键物件",
+    theme: "在压力中找到勇气，并把创意变成行动"
+  };
+}
+
+function deriveTitle(idea: string, project?: ProjectContext) {
+  if (!hasLegacyDefault(project)) {
+    return project?.title || "创意短片";
+  }
+
+  const titleCore = compact(idea, 8);
+  return `${titleCore}物语`;
+}
+
+function deriveRoleNames(idea: string) {
+  const seed = hashText(idea);
+  return {
+    protagonist: pick(namePool, seed),
+    companion: pick(companionPool, seed + 3),
+    obstacle: pick(obstaclePool, seed + 7)
+  };
+}
+
+function parseDurationTarget(value?: string) {
+  const match = value?.match(/(\d+)\s*-\s*(\d+)/);
+  if (!match) {
+    return 7;
+  }
+  const max = Number(match[2]) || 60;
+  return Math.max(5, Math.min(12, Math.round(max / 6)));
+}
+
+function extractRoleNames(scriptContent: string) {
+  const matches = [...scriptContent.matchAll(/^\d+\.\s*([^：:\n]+)[：:]/gm)]
+    .map((match) => match[1].trim())
+    .filter(Boolean);
+  return matches.length ? matches.slice(0, 4) : ["主角", "伙伴"];
+}
+
+function extractPlotSections(scriptContent: string): PlotSection[] {
+  const labels = ["开端", "发展", "转折", "高潮", "结尾"];
+  return labels.map((label) => {
+    const pattern = new RegExp(`${label}：([\\s\\S]*?)(?=\\n\\n(?:发展|转折|高潮|结尾|关键对白|风格约束)：|$)`);
+    const text = scriptContent.match(pattern)?.[1]?.trim();
+    return {
+      label,
+      text: text || `${label}围绕核心创意继续推进人物行动。`
+    };
+  });
+}
+
+function firstSentence(value: string, fallback: string) {
+  const sentence = value.split(/[。！？\n]/).map((item) => item.trim()).find(Boolean);
+  return sentence || fallback;
+}
+
+function roleAssetsFromScript(scriptContent: string, style: string): GeneratedAsset[] {
+  const roleMatches = [...scriptContent.matchAll(/^\d+\.\s*([^：:\n]+)[：:]\s*([^\n]+)/gm)];
+  const roles = roleMatches.length ? roleMatches.slice(0, 4) : [["", "主角", "围绕创意行动并完成成长。"]];
+
+  return roles.map((match) => {
+    const name = Array.isArray(match) ? match[1].trim() : "主角";
+    const description = Array.isArray(match) ? match[2].trim() : "围绕创意行动并完成成长。";
+    return {
+      assetType: "role",
+      name,
+      description,
+      prompt: `${style}，${name}，${description}，多角度角色设定图，表情和服装特征清晰`,
+      imageUrl: null,
+      audioUrl: null,
+      metadataJson: { source: "script", storyFunction: "character" },
+      status: "ready"
+    };
+  });
 }
 
 export const mockProvider = {
-  generateScript(input: { idea: string; project?: ProjectContext }) {
+  generateScript(input: { idea: string; project?: ProjectContext }): GeneratedScript {
     const idea = cleanIdea(input.idea);
-    const title = input.project?.title || "全民反诈守护";
-    const style = input.project?.stylePreset || "儿童反诈漫画短视频";
+    const title = deriveTitle(idea, input.project);
+    const tone = inferTone(idea, input.project);
+    const roles = deriveRoleNames(idea);
+    const style = input.project?.stylePreset || tone.genre;
 
     return {
       originalIdea: idea,
-      scriptContent: `《${title}》第一集：不明二维码不扫描
+      scriptContent: `《${title}》第一集：创意被点亮的那一天
 
 一句话卖点：
 ${idea}
 
-${scriptBody}
+主题定位：
+这是一支${tone.genre}，把“${idea}”转化成有角色目标、可视化冲突和明确情绪收束的短片。故事核心是${tone.theme}。
+
+主要角色：
+1. ${roles.protagonist}：主角，外表带有${style}的鲜明识别点，对“${compact(idea, 12)}”抱有强烈执念，但一开始缺少行动信心。人物变化：从被局势推着走，到主动选择并承担结果。
+2. ${roles.companion}：伙伴，观察敏锐，常用轻松方式提醒主角看见另一种可能。人物变化：从旁观支持，到在关键时刻和主角并肩完成行动。
+3. ${roles.obstacle}：阻力来源，不一定是单一反派，而是围绕目标制造压力的规则、误会或外部危机。人物变化：让主角看清真正要解决的问题。
+
+剧情结构：
+开端：${roles.protagonist}出现在${tone.world}，正准备实践“${compact(idea, 18)}”。一个突然出现的异常信号打乱计划，也把主角推到选择面前。
+
+发展：${roles.companion}加入行动，两人尝试用最直接的方法解决问题，却发现${roles.obstacle}不断放大误会。${tone.prop}第一次出现，暗示真正的答案不在表面。
+
+转折：主角追查${tone.prop}的来源时，发现危机其实和自己最初忽略的细节有关。${roles.protagonist}意识到，如果继续按原计划推进，会失去故事中最重要的人或目标。
+
+高潮：在时间压力下，${roles.protagonist}放弃轻松取胜的路径，选择公开承担责任。${roles.companion}配合完成关键动作，${roles.obstacle}被重新定义，冲突迎来正面解决。
+
+结尾：${tone.world}恢复明亮，${roles.protagonist}收起${tone.prop}，把这次经历变成下一段旅程的起点。镜头停在主角坚定的表情上，留下继续创作的余味。
+
+关键对白：
+${roles.protagonist}：“我以为答案在前面，其实它一直在我不敢面对的地方。”
+${roles.companion}：“那就别绕路了，我们一起把它点亮。”
+${roles.protagonist}：“这一次，我来承担选择。”
+旁白：“真正的创意，不只是闪光的一瞬间，而是把它完成的人。”
 
 风格约束：
-${style}、暖黄客厅、街角奶茶店、呆萌主角、狐狸诈骗精、手机界面提示、红包图标、盾牌气泡、不明二维码、夸张表情、快速节奏、轻松反转、正向收束。
-整体画面风格保持清新可爱、线条清晰、色彩明快。前半段客厅使用暖黄色调，营造日常安全感；转入街道和奶茶店后色调略微转冷，制造可疑氛围；识破骗局后回到明亮阳光色调，强化“反诈成功”的积极结尾。`,
+- ${style}，画面围绕用户创意设计，不套用固定案例。
+- 画幅保持 ${input.project?.aspectRatio || "9:16"}，镜头节奏适配 ${input.project?.durationTarget || "30-60s"}。
+- 角色、道具、场景必须服务于“${compact(idea, 20)}”，避免出现与创意无关的固定素材。`,
       version: 1,
       status: "generated"
     };
   },
 
-  extractAssetsFromScript(input: { scriptContent: string; project?: ProjectContext }) {
-    const style = input.project?.stylePreset || "儿童反诈漫画短视频";
-    return [
+  extractAssetsFromScript(input: { scriptContent: string; project?: ProjectContext }): GeneratedAsset[] {
+    const style = input.project?.stylePreset || "动画短片";
+    const title = input.scriptContent.match(/《([^》]+)》/)?.[1] || input.project?.title || "创意短片";
+    const roleAssets = roleAssetsFromScript(input.scriptContent, style);
+    const plotSections = extractPlotSections(input.scriptContent);
+    const sceneA = firstSentence(plotSections[0]?.text || "", `${title}的开场主场景`);
+    const sceneB = firstSentence(plotSections[3]?.text || "", `${title}的高潮行动场景`);
+
+    const assets: GeneratedAsset[] = [
+      ...roleAssets,
       {
-        assetType: "role",
-        name: "小呆",
-        description: "穿蓝色小熊卫衣的小男孩，性格呆萌、好奇，容易被红包和福利吸引，但关键时刻能清醒判断并主动停止风险操作。",
-        prompt: `${style}，小呆，蓝色小熊卫衣，呆萌小男孩，多角度角色设定图，清新可爱线条`,
-        imageUrl: fanzhaImages.xiaodai,
+        assetType: "scene",
+        name: `${title}开场场景`,
+        description: sceneA,
+        prompt: `${style}，${title}开场场景，${sceneA}，空间层次清晰，适合竖屏动画`,
+        imageUrl: null,
         audioUrl: null,
-        metadataJson: { consistencyKey: "role-xiaodai", warning: "陌生链接不乱点，不明二维码不扫描" },
-        status: "ready"
-      },
-      {
-        assetType: "role",
-        name: "诈骗精",
-        description: "狐狸形象，穿紫色马甲，表情狡猾夸张，躲在广告牌后诱导扫码，代表红包链接和二维码骗局。",
-        prompt: `${style}，诈骗精，狐狸反派，紫色马甲，狡猾夸张表情，多角度角色设定图`,
-        imageUrl: fanzhaImages.scamFox,
-        audioUrl: null,
-        metadataJson: { consistencyKey: "role-scam-fox", risk: "扫码领红包诱导" },
+        metadataJson: { source: "script", storyFunction: "opening" },
         status: "ready"
       },
       {
         assetType: "scene",
-        name: "暖黄居家客厅",
-        description: "晚上小呆刷手机的暖黄色客厅，茶几、沙发、手机亮屏和红包提示构成第一段陌生链接风险场景。",
-        prompt: `${style}，暖黄色居家客厅，手机红包链接弹出，日常安全感，儿童反诈开场场景`,
-        imageUrl: fanzhaImages.livingRoom,
+        name: `${title}高潮场景`,
+        description: sceneB,
+        prompt: `${style}，${title}高潮场景，${sceneB}，情绪张力强，适合关键镜头`,
+        imageUrl: null,
         audioUrl: null,
-        metadataJson: { lighting: "warm indoor", storyFunction: "陌生红包链接出现" },
-        status: "ready"
-      },
-      {
-        assetType: "scene",
-        name: "街角奶茶店",
-        description: "街角奶茶店门口摆着扫码领红包广告牌，是诈骗精诱导小呆扫描不明二维码的主要场景。",
-        prompt: `${style}，街角奶茶店，扫码领红包广告牌，不明二维码，冷调可疑氛围`,
-        imageUrl: fanzhaImages.milkTeaShop,
-        audioUrl: null,
-        metadataJson: { storyFunction: "扫码诱导与风险识别" },
+        metadataJson: { source: "script", storyFunction: "climax" },
         status: "ready"
       },
       {
         assetType: "prop",
-        name: "红包链接与盾牌气泡",
-        description: "手机弹出的红包图标和蓝色盾牌气泡，用来表现陌生链接诱惑与及时风险提醒。",
-        prompt: `${style}，手机红包链接，蓝色盾牌气泡，网络安全提醒，陌生链接不乱点`,
+        name: `${title}核心道具`,
+        description: "推动剧情转折的关键物件，承载主角目标和情绪变化。",
+        prompt: `${style}，${title}核心道具，具有故事象征意义，适合作为镜头特写`,
         imageUrl: null,
         audioUrl: null,
-        metadataJson: { warning: "陌生链接不乱点" },
-        status: "ready"
-      },
-      {
-        assetType: "prop",
-        name: "扫码领红包广告牌",
-        description: "奶茶店门口写着扫码领红包的广告牌，二维码诱导是本集骗局的关键道具。",
-        prompt: `${style}，扫码领红包广告牌，不明二维码，街角奶茶店门口，儿童反诈关键道具`,
-        imageUrl: null,
-        audioUrl: null,
-        metadataJson: { warning: "不明二维码不扫描" },
+        metadataJson: { source: "script", storyFunction: "turning-point" },
         status: "ready"
       },
       {
         assetType: "voice",
-        name: "反诈口诀旁白",
-        description: "清亮、轻松、有记忆点的儿童反诈旁白，用于收束口号：反诈口诀刻心里，守住钱袋笑嘻嘻。",
-        prompt: "bright child-friendly anti-fraud narration, catchy public safety reminder",
+        name: `${title}旁白声线`,
+        description: "清晰、有情绪推进感的中文旁白，用于串联开端、转折和结尾。",
+        prompt: "clear emotional Mandarin narration, animated short, warm but cinematic",
         imageUrl: null,
         audioUrl: null,
-        metadataJson: { mood: "positive", function: "anti-fraud reminder" },
+        metadataJson: { source: "script", storyFunction: "narration" },
         status: "ready"
       },
       {
         assetType: "music",
-        name: "轻快反诈 BGM",
-        description: "前半段轻松好奇，识破骗局时快速反转，结尾转为明亮正向的儿童反诈短视频配乐。",
-        prompt: "upbeat cartoon public-safety music, playful suspense, positive ending, 100 bpm",
+        name: `${title}主题配乐`,
+        description: "从好奇铺垫到紧张推进，再到明亮收束的短片配乐。",
+        prompt: "animated short soundtrack, curious opening, rising tension, hopeful ending",
         imageUrl: null,
         audioUrl: null,
-        metadataJson: { bpm: 100, mood: "playful and reassuring" },
+        metadataJson: { source: "script", storyFunction: "music" },
         status: "ready"
       }
     ];
+
+    return assets.slice(0, 12);
   },
 
-  generateStoryboard(input: { scriptContent: string; assets: AssetInput[]; project?: ProjectContext }) {
-    const roleNames = input.assets.filter((asset) => asset.assetType === "role").map((asset) => asset.name);
-    const xiaodai = roleNames.find((name) => name.includes("小呆")) || "小呆";
-    const scamFox = roleNames.find((name) => name.includes("诈骗精")) || "诈骗精";
+  generateStoryboard(input: { scriptContent: string; assets: AssetInput[]; project?: ProjectContext }): GeneratedStoryboard[] {
+    const style = input.project?.stylePreset || "动画短片";
+    const roles = input.assets.filter((asset) => asset.assetType === "role").map((asset) => asset.name);
+    const scenes = input.assets.filter((asset) => asset.assetType === "scene").map((asset) => asset.name);
+    const plotSections = extractPlotSections(input.scriptContent);
+    const duration = parseDurationTarget(input.project?.durationTarget);
 
-    return storyboards.map((shot) => ({
-      ...shot,
-      charactersJson: shot.charactersJson.map((name) => (name === "小呆" ? xiaodai : name === "诈骗精" ? scamFox : name))
-    }));
+    return plotSections.map((section, index) => {
+      const sceneName = scenes[index % Math.max(1, scenes.length)] || `${section.label}场景`;
+      const activeRoles = roles.length ? roles.slice(0, Math.min(2, roles.length)) : ["主角"];
+      const visual = firstSentence(section.text, `${section.label}推进核心剧情。`);
+
+      return {
+        shotNo: index + 1,
+        sceneName: `${sceneName} / ${section.label}`,
+        charactersJson: activeRoles,
+        visualDescription: visual,
+        dialogue: section.label === "结尾" ? "旁白：真正的创意，是把闪光的一瞬间完成。" : "",
+        cameraMovement:
+          index === 0
+            ? "缓慢推进建立环境，再切入主角动作"
+            : index === plotSections.length - 1
+              ? "跟随主角动作后上摇或拉远，形成情绪收束"
+              : "中景跟拍人物行动，关键细节用快速特写强调",
+        durationSeconds: duration,
+        imagePrompt: `${style}，${sceneName}，${visual}，角色：${activeRoles.join("、")}，竖屏动画分镜，构图清晰`,
+        imageUrl: null,
+        videoUrl: null,
+        status: "draft"
+      };
+    });
   },
 
   generateImage(input: { storyboards: StoryboardInput[] }) {
-    return input.storyboards.map((shot, index) => ({
+    return input.storyboards.map((shot) => ({
       storyboardId: shot.id,
-      imageUrl: pick(fallbackImages, index),
-      status: "image_ready"
+      imageUrl: shot.imageUrl || null,
+      status: shot.imageUrl ? "image_ready" : "image_prompt_ready"
     }));
   },
 
-  generateVideo(input: { storyboards: StoryboardInput[] }) {
-    return input.storyboards.map((shot, index) => ({
-      storyboardId: shot.id,
-      videoUrl: pick(fanzhaVideos, index),
-      status: "video_ready"
-    }));
+  generateVideo(_input?: { storyboards?: StoryboardInput[] }) {
+    return [];
   },
 
   reviewStoryboard(input: { storyboards: StoryboardInput[] }) {
@@ -281,8 +317,9 @@ ${style}、暖黄客厅、街角奶茶店、呆萌主角、狐狸诈骗精、手
     const avgDuration = count
       ? input.storyboards.reduce((sum, shot) => sum + shot.durationSeconds, 0) / count
       : 0;
-    const emptyDialogue = input.storyboards.filter((shot) => !shot.dialogue?.trim()).length;
-    const score = count < 4 ? 64 : emptyDialogue > 1 ? 72 : avgDuration > 14 ? 78 : 90;
+    const emptyVisual = input.storyboards.filter((shot) => !shot.visualDescription?.trim()).length;
+    const emptyPrompt = input.storyboards.filter((shot) => !shot.imagePrompt?.trim()).length;
+    const score = count < 4 ? 62 : emptyVisual || emptyPrompt ? 72 : avgDuration > 15 ? 78 : 90;
     const riskLevel = score >= 80 ? "low" : score >= 65 ? "medium" : "high";
 
     return {
@@ -291,26 +328,26 @@ ${style}、暖黄客厅、街角奶茶店、呆萌主角、狐狸诈骗精、手
       targetType: "storyboards",
       targetId: null,
       dimensions: {
-        compliance: riskLevel === "high" ? 65 : 94,
+        compliance: riskLevel === "high" ? 66 : 92,
         plotLogic: score,
-        shotContinuity: score - 1,
-        consistency: score + 2,
+        shotContinuity: Math.max(0, score - 2),
+        consistency: Math.min(100, score + 1),
         executability: score
       },
       issuesJson:
         riskLevel === "low"
-          ? ["分镜顺序完整，陌生链接出现、扫码诱导、风险识破和口诀收束形成连续闭环。"]
+          ? ["分镜数量、画面描述、运镜和时长基本完整，可以进入图片或视频生成。"]
           : [
-              count < 4 ? "分镜数量不足，红包链接、扫码诱导、识破拒绝和安全提醒链路不够完整。" : "部分镜头转场动机需要更清晰。",
-              emptyDialogue ? "存在缺少提示语的镜头，建议补充人物反应或反诈口诀。" : "可进一步强化不明二维码不扫描的动作节点。"
+              count < 4 ? "分镜数量不足，建议至少覆盖开端、发展、转折和结尾。" : "部分镜头的信息密度或转场动机还可以更清晰。",
+              emptyPrompt ? "存在缺少图片提示词的镜头，建议补齐可执行的视觉描述。" : "建议检查每条镜头是否都服务于用户创意。"
             ],
       suggestionsJson:
         riskLevel === "low"
-          ? ["可进入视频生成，建议保持红包链接、盾牌气泡、不明二维码和反诈口诀的连续出现。"]
+          ? ["可进入视频生成，建议保持角色、场景和核心道具在镜头中的连续性。"]
           : [
-              "补齐陌生链接、扫码领红包、二维码识别和拒绝扫码四个关键提示。",
-              "将每条分镜控制在 6-11 秒，保持儿童反诈短视频节奏。",
-              "确保结尾明确给出可执行的反诈口诀。"
+              "补齐每条分镜的画面、角色、运镜和图片提示词。",
+              "将单条镜头控制在 5-12 秒，避免节奏过慢。",
+              "确保结尾能回应创意中的核心目标或情绪。"
             ]
     };
   },
@@ -318,10 +355,9 @@ ${style}、暖黄客厅、街角奶茶店、呆萌主角、狐狸诈骗精、手
   exportFinalVideo(input: { project?: ProjectContext; storyboards: StoryboardInput[]; format?: string }) {
     const format = input.format || "mp4";
     return {
-      fileUrl: `/assets/fanzha/成片.${format}`,
       format,
-      status: "completed",
-      summary: `已合成 ${input.storyboards.length} 个儿童反诈主题视频片段，包含陌生红包链接、扫码诱导、不明二维码识破和反诈口诀收束。`
+      status: "queued",
+      summary: `准备合成 ${input.storyboards.length} 个动态创意视频片段。`
     };
   }
 };

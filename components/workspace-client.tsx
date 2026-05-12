@@ -65,6 +65,12 @@ type StoryboardRecord = {
   status: string;
 };
 
+type ImagePreview = {
+  title: string;
+  imageUrl: string;
+  subtitle?: string;
+};
+
 type GenerationTask = {
   id: string;
   taskType: string;
@@ -135,6 +141,7 @@ const taskLabels: Record<string, string> = {
   storyboards: "自动生成分镜",
   review: "创意审查门禁",
   images: "分镜图片生成",
+  asset_images: "资产图片生成",
   videos: "分镜视频生成",
   export: "成片导出"
 };
@@ -152,12 +159,17 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
   const [mediumConfirmed, setMediumConfirmed] = useState(false);
   const [editingAsset, setEditingAsset] = useState<AssetRecord | null>(null);
   const [editingStoryboard, setEditingStoryboard] = useState<StoryboardRecord | null>(null);
+  const [imagePreview, setImagePreview] = useState<ImagePreview | null>(null);
+  const [startingTaskTypes, setStartingTaskTypes] = useState<Set<string>>(new Set());
   const pollingRef = useRef<Set<string>>(new Set());
   const timersRef = useRef<Map<string, number>>(new Map());
+  const startingTaskTypesRef = useRef<Set<string>>(new Set());
 
   const latestReview = project?.reviewReports?.[0];
   const activeTasks = project?.generationTasks?.filter((task) => ["pending", "running"].includes(task.status)) || [];
   const canUseVideo = latestReview?.riskLevel === "low" || (latestReview?.riskLevel === "medium" && mediumConfirmed);
+  const busyTaskTypes = useMemo(() => new Set(activeTasks.map((task) => task.taskType)), [activeTasks]);
+  const isTaskBusy = (taskType: string) => startingTaskTypes.has(taskType) || busyTaskTypes.has(taskType);
 
   async function loadProject(nextStep?: StepKey) {
     try {
@@ -211,8 +223,23 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
     }
   }
 
-  async function startTask(endpoint: string, body: Record<string, unknown>, nextStep?: StepKey) {
+  function setTaskStarting(taskType: string, isStarting: boolean) {
+    if (isStarting) {
+      startingTaskTypesRef.current.add(taskType);
+    } else {
+      startingTaskTypesRef.current.delete(taskType);
+    }
+    setStartingTaskTypes(new Set(startingTaskTypesRef.current));
+  }
+
+  async function startTask(endpoint: string, body: Record<string, unknown>, nextStep?: StepKey, taskType = endpoint) {
+    if (startingTaskTypesRef.current.has(taskType) || activeTasks.some((task) => task.taskType === taskType)) {
+      showToast(`${taskLabels[taskType] || "任务"}正在运行`);
+      return;
+    }
+
     setError("");
+    setTaskStarting(taskType, true);
     try {
       const data = await api<{ task: GenerationTask }>(endpoint, {
         method: "POST",
@@ -230,6 +257,8 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
       showToast("任务已进入 generation_tasks");
     } catch (err) {
       setError(err instanceof Error ? err.message : "任务启动失败");
+    } finally {
+      setTaskStarting(taskType, false);
     }
   }
 
@@ -391,12 +420,13 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
             <button
               onClick={() => {
                 setActiveStep("edit");
-                void startTask(`/api/projects/${projectId}/export`, { format: "mp4" }, "edit");
+                void startTask(`/api/projects/${projectId}/export`, { format: "mp4" }, "edit", "export");
               }}
-              className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white"
+              disabled={isTaskBusy("export")}
+              className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white disabled:opacity-45"
             >
               <Download size={16} />
-              导出
+              {isTaskBusy("export") ? "导出中" : "导出"}
             </button>
           </div>
         </div>
@@ -464,13 +494,19 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
               onScriptChange={setScriptContent}
               onSave={() => void saveScript()}
               onImport={importTextFile}
-              onGenerate={() => void startTask("/api/generation/story", { projectId, idea: originalIdea }, "assets")}
+              onGenerate={() => void startTask("/api/generation/story", { projectId, idea: originalIdea }, "assets", "story")}
+              generating={isTaskBusy("story")}
             />
           )}
           {activeStep === "assets" && (
             <AssetsStep
               groupedAssets={groupedAssets}
-              onGenerate={() => void startTask("/api/generation/assets", { projectId }, "storyboard")}
+              onGenerate={() => void startTask("/api/generation/assets", { projectId }, "storyboard", "assets")}
+              onGenerateImages={() => void startTask("/api/generation/asset-images", { projectId }, "assets", "asset_images")}
+              onRegenerateImage={(assetId) => void startTask("/api/generation/asset-images", { projectId, assetId }, "assets", "asset_images")}
+              generating={isTaskBusy("assets")}
+              generatingImages={isTaskBusy("asset_images")}
+              onPreviewImage={setImagePreview}
               onEdit={setEditingAsset}
               onCreate={() =>
                 setEditingAsset({
@@ -492,11 +528,13 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
               latestReview={latestReview}
               mediumConfirmed={mediumConfirmed}
               canUseVideo={canUseVideo}
-              onGenerate={() => void startTask("/api/generation/storyboards", { projectId }, "storyboard")}
-              onReview={() => void startTask("/api/generation/review", { projectId }, "storyboard")}
+              onGenerate={() => void startTask("/api/generation/storyboards", { projectId }, "storyboard", "storyboards")}
+              onReview={() => void startTask("/api/generation/review", { projectId }, "storyboard", "review")}
               onConfirmMedium={() => setMediumConfirmed(true)}
               onEnterVideo={() => enterStep("video")}
               onEdit={setEditingStoryboard}
+              generating={isTaskBusy("storyboards")}
+              reviewing={isTaskBusy("review")}
             />
           )}
           {activeStep === "video" && (
@@ -504,16 +542,21 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
               storyboards={project.storyboards}
               canUseVideo={canUseVideo}
               latestReview={latestReview}
-              onReview={() => void startTask("/api/generation/review", { projectId }, "storyboard")}
-              onGenerateImages={() => void startTask("/api/generation/images", { projectId }, "video")}
-              onGenerateVideos={() => void startTask("/api/generation/videos", { projectId }, "edit")}
+              onReview={() => void startTask("/api/generation/review", { projectId }, "storyboard", "review")}
+              onGenerateImages={() => void startTask("/api/generation/images", { projectId }, "video", "images")}
+              onRegenerateImage={(storyboardId) => void startTask("/api/generation/images", { projectId, storyboardId }, "video", "images")}
+              onGenerateVideos={() => void startTask("/api/generation/videos", { projectId }, "edit", "videos")}
+              reviewing={isTaskBusy("review")}
+              generatingImages={isTaskBusy("images")}
+              generatingVideos={isTaskBusy("videos")}
             />
           )}
           {activeStep === "edit" && (
             <EditStep
               storyboards={project.storyboards}
               exports={project.exports}
-              onExport={() => void startTask(`/api/projects/${projectId}/export`, { format: "mp4" }, "edit")}
+              onExport={() => void startTask(`/api/projects/${projectId}/export`, { format: "mp4" }, "edit", "export")}
+              exporting={isTaskBusy("export")}
             />
           )}
         </section>
@@ -530,6 +573,11 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
             setEditingAsset(null);
             void loadProject("assets");
           }}
+          onRegenerateImage={(assetId) => {
+            setEditingAsset(null);
+            void startTask("/api/generation/asset-images", { projectId, assetId }, "assets", "asset_images");
+          }}
+          onPreviewImage={setImagePreview}
         />
       )}
       {editingStoryboard && (
@@ -540,8 +588,13 @@ export function WorkspaceClient({ projectId }: { projectId: string }) {
             setEditingStoryboard(null);
             void loadProject("storyboard");
           }}
+          onRegenerateImage={(storyboardId) => {
+            setEditingStoryboard(null);
+            void startTask("/api/generation/images", { projectId, storyboardId }, "video", "images");
+          }}
         />
       )}
+      {imagePreview && <ImagePreviewModal preview={imagePreview} onClose={() => setImagePreview(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-card bg-ink px-5 py-3 font-semibold text-white shadow-work">{toast}</div>}
     </main>
   );
@@ -573,6 +626,7 @@ function ScriptStep(props: {
   onSave: () => void;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onGenerate: () => void;
+  generating: boolean;
 }) {
   return (
     <div className="panel overflow-hidden">
@@ -586,9 +640,13 @@ function ScriptStep(props: {
               导入文档
               <input type="file" accept=".txt,.md,.docx" className="hidden" onChange={props.onImport} />
             </label>
-            <button onClick={props.onGenerate} className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white">
-              <Wand2 size={16} />
-              AI 生成剧本
+            <button
+              onClick={props.onGenerate}
+              disabled={props.generating}
+              className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white disabled:opacity-45"
+            >
+              {props.generating ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
+              {props.generating ? "生成中" : "AI 生成剧本"}
             </button>
             <button onClick={props.onSave} disabled={props.saving} className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white">
               <Save size={16} />
@@ -624,6 +682,11 @@ function ScriptStep(props: {
 function AssetsStep(props: {
   groupedAssets: Record<string, AssetRecord[]>;
   onGenerate: () => void;
+  onGenerateImages: () => void;
+  onRegenerateImage: (assetId: string) => void;
+  generating: boolean;
+  generatingImages: boolean;
+  onPreviewImage: (preview: ImagePreview) => void;
   onEdit: (asset: AssetRecord) => void;
   onCreate: () => void;
 }) {
@@ -640,9 +703,21 @@ function AssetsStep(props: {
               <Plus size={16} />
               新增资产
             </button>
-            <button onClick={props.onGenerate} className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white">
-              <Wand2 size={16} />
-              自动生成资产
+            <button
+              onClick={props.onGenerate}
+              disabled={props.generating}
+              className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white disabled:opacity-45"
+            >
+              {props.generating ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
+              {props.generating ? "生成中" : "自动生成资产"}
+            </button>
+            <button
+              onClick={props.onGenerateImages}
+              disabled={props.generatingImages}
+              className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white disabled:opacity-45"
+            >
+              {props.generatingImages ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
+              {props.generatingImages ? "出图中" : "生成资产图"}
             </button>
           </div>
         }
@@ -657,27 +732,53 @@ function AssetsStep(props: {
             {props.groupedAssets[type]?.length ? (
               <div className="grid gap-3 md:grid-cols-2">
                 {props.groupedAssets[type].map((asset) => (
-                  <button
+                  <article
                     key={asset.id}
-                    onClick={() => props.onEdit(asset)}
                     className={cn(
                       "rounded-card border border-line bg-white p-3 text-left transition hover:border-teal/40 hover:shadow-work",
                       asset.imageUrl ? "grid grid-cols-[76px_1fr] gap-4" : "block"
                     )}
                   >
                     {asset.imageUrl && (
-                      <div className="flex h-[76px] w-[76px] items-center justify-center overflow-hidden rounded-card bg-paper">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          props.onPreviewImage({
+                            title: asset.name || "资产图片",
+                            subtitle: assetLabels[asset.assetType] || asset.assetType,
+                            imageUrl: asset.imageUrl || ""
+                          })
+                        }
+                        className="group relative flex h-[76px] w-[76px] items-center justify-center overflow-hidden rounded-card bg-paper ring-offset-2 transition focus:outline-none focus:ring-2 focus:ring-teal"
+                        aria-label={`查看${asset.name}原图`}
+                      >
                         <img src={asset.imageUrl} alt={asset.name} className="h-full w-full object-cover" />
-                      </div>
+                        <span className="absolute inset-x-0 bottom-0 bg-ink/75 px-1 py-1 text-center text-[11px] font-semibold text-white opacity-0 transition group-hover:opacity-100 group-focus:opacity-100">
+                          查看原图
+                        </span>
+                      </button>
                     )}
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="truncate font-semibold text-ink">{asset.name}</h4>
-                        <span className="rounded-full bg-teal/10 px-2 py-0.5 text-xs font-semibold text-teal">{asset.status}</span>
+                      <div className="flex items-start justify-between gap-2">
+                        <button type="button" onClick={() => props.onEdit(asset)} className="min-w-0 flex-1 text-left">
+                          <span className="block truncate font-semibold text-ink">{asset.name}</span>
+                          <span className="mt-1 block line-clamp-2 text-sm leading-6 text-muted">{asset.description}</span>
+                        </button>
+                        <span className="shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-xs font-semibold text-teal">{asset.status}</span>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted">{asset.description}</p>
+                      {["role", "scene", "prop"].includes(asset.assetType) && (
+                        <button
+                          type="button"
+                          onClick={() => props.onRegenerateImage(asset.id)}
+                          disabled={props.generatingImages}
+                          className="mt-3 inline-flex items-center gap-2 rounded-card border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-teal/40 disabled:opacity-45"
+                        >
+                          {props.generatingImages ? <Loader2 className="animate-spin" size={14} /> : <ImageIcon size={14} />}
+                          {props.generatingImages ? "出图中" : "重生成图片"}
+                        </button>
+                      )}
                     </div>
-                  </button>
+                  </article>
                 ))}
               </div>
             ) : (
@@ -700,6 +801,8 @@ function StoryboardStep(props: {
   onConfirmMedium: () => void;
   onEnterVideo: () => void;
   onEdit: (storyboard: StoryboardRecord) => void;
+  generating: boolean;
+  reviewing: boolean;
 }) {
   return (
     <div className="panel overflow-hidden">
@@ -709,13 +812,21 @@ function StoryboardStep(props: {
         title="分镜打造"
         actions={
           <div className="flex flex-wrap gap-2">
-            <button onClick={props.onGenerate} className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white">
-              <Wand2 size={16} />
-              自动生成分镜
+            <button
+              onClick={props.onGenerate}
+              disabled={props.generating}
+              className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white disabled:opacity-45"
+            >
+              {props.generating ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
+              {props.generating ? "生成中" : "自动生成分镜"}
             </button>
-            <button onClick={props.onReview} className="inline-flex items-center gap-2 rounded-card border border-line bg-white px-4 py-2 font-semibold text-ink">
-              <ShieldCheck size={16} />
-              运行审查
+            <button
+              onClick={props.onReview}
+              disabled={props.reviewing}
+              className="inline-flex items-center gap-2 rounded-card border border-line bg-white px-4 py-2 font-semibold text-ink disabled:opacity-45"
+            >
+              {props.reviewing ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+              {props.reviewing ? "审查中" : "运行审查"}
             </button>
             {props.latestReview?.riskLevel === "medium" && !props.mediumConfirmed && (
               <button onClick={props.onConfirmMedium} className="rounded-card bg-amber px-4 py-2 font-semibold text-ink">
@@ -782,7 +893,11 @@ function VideoStep(props: {
   latestReview?: ReviewReport;
   onReview: () => void;
   onGenerateImages: () => void;
+  onRegenerateImage: (storyboardId: string) => void;
   onGenerateVideos: () => void;
+  reviewing: boolean;
+  generatingImages: boolean;
+  generatingVideos: boolean;
 }) {
   return (
     <div className="panel overflow-hidden">
@@ -792,25 +907,29 @@ function VideoStep(props: {
         title="视频生成"
         actions={
           <div className="flex flex-wrap gap-2">
-            <button onClick={props.onReview} className="inline-flex items-center gap-2 rounded-card border border-line bg-white px-4 py-2 font-semibold text-ink">
-              <ShieldCheck size={16} />
-              复审
+            <button
+              onClick={props.onReview}
+              disabled={props.reviewing}
+              className="inline-flex items-center gap-2 rounded-card border border-line bg-white px-4 py-2 font-semibold text-ink disabled:opacity-45"
+            >
+              {props.reviewing ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+              {props.reviewing ? "复审中" : "复审"}
             </button>
             <button
               onClick={props.onGenerateImages}
-              disabled={!props.canUseVideo}
-              className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white"
+              disabled={!props.canUseVideo || props.generatingImages}
+              className="inline-flex items-center gap-2 rounded-card bg-teal px-4 py-2 font-semibold text-white disabled:opacity-45"
             >
-              <ImageIcon size={16} />
-              生成图片
+              {props.generatingImages ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
+              {props.generatingImages ? "出图中" : "生成图片"}
             </button>
             <button
               onClick={props.onGenerateVideos}
-              disabled={!props.canUseVideo}
-              className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white"
+              disabled={!props.canUseVideo || props.generatingVideos}
+              className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white disabled:opacity-45"
             >
-              <Play size={16} />
-              生成视频
+              {props.generatingVideos ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
+              {props.generatingVideos ? "生成中" : "生成视频"}
             </button>
           </div>
         }
@@ -840,6 +959,15 @@ function VideoStep(props: {
                     <p className="font-semibold text-ink">视频片段</p>
                     <p className="mt-1 break-all text-muted">{shot.videoUrl ? "真实 MP4 已生成，可在上方播放" : "尚未生成"}</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => props.onRegenerateImage(shot.id)}
+                    disabled={!props.canUseVideo || props.generatingImages}
+                    className="inline-flex items-center gap-2 rounded-card border border-line bg-white px-3 py-2 text-sm font-semibold text-ink disabled:opacity-45"
+                  >
+                    {props.generatingImages ? <Loader2 className="animate-spin" size={15} /> : <ImageIcon size={15} />}
+                    {props.generatingImages ? "出图中" : "重生成图片"}
+                  </button>
                 </div>
               </article>
             ))}
@@ -852,7 +980,7 @@ function VideoStep(props: {
   );
 }
 
-function EditStep(props: { storyboards: StoryboardRecord[]; exports: ExportRecord[]; onExport: () => void }) {
+function EditStep(props: { storyboards: StoryboardRecord[]; exports: ExportRecord[]; onExport: () => void; exporting: boolean }) {
   const readyClips = props.storyboards.filter((shot) => shot.videoUrl);
   const latestExport = props.exports[0];
   return (
@@ -862,9 +990,13 @@ function EditStep(props: { storyboards: StoryboardRecord[]; exports: ExportRecor
         eyebrow="Step 05"
         title="剪辑修正"
         actions={
-          <button onClick={props.onExport} className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white">
-            <Download size={16} />
-            合成并导出
+          <button
+            onClick={props.onExport}
+            disabled={props.exporting}
+            className="inline-flex items-center gap-2 rounded-card bg-ink px-4 py-2 font-semibold text-white disabled:opacity-45"
+          >
+            {props.exporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            {props.exporting ? "导出中" : "合成并导出"}
           </button>
         }
       />
@@ -1062,7 +1194,14 @@ function EmptyState({ icon: Icon, title, text }: { icon: typeof Film; title: str
   );
 }
 
-function AssetModal(props: { asset: AssetRecord; projectId: string; onClose: () => void; onSaved: () => void }) {
+function AssetModal(props: {
+  asset: AssetRecord;
+  projectId: string;
+  onClose: () => void;
+  onSaved: () => void;
+  onRegenerateImage?: (assetId: string) => void;
+  onPreviewImage?: (preview: ImagePreview) => void;
+}) {
   const [asset, setAsset] = useState(props.asset);
   const [error, setError] = useState("");
 
@@ -1121,22 +1260,63 @@ function AssetModal(props: { asset: AssetRecord; projectId: string; onClose: () 
           <span className="mb-2 block text-sm font-semibold text-ink">图片 URL</span>
           <input value={asset.imageUrl || ""} onChange={(event) => setAsset({ ...asset, imageUrl: event.target.value })} />
         </label>
+        {asset.imageUrl && (
+          <button
+            type="button"
+            onClick={() =>
+              props.onPreviewImage?.({
+                title: asset.name || "资产图片",
+                subtitle: assetLabels[asset.assetType] || asset.assetType,
+                imageUrl: asset.imageUrl || ""
+              })
+            }
+            className="grid gap-3 rounded-card border border-line bg-paper p-3 text-left transition hover:border-teal/40 focus:outline-none focus:ring-2 focus:ring-teal"
+          >
+            <span className="text-sm font-semibold text-ink">图片预览</span>
+            <span className="flex items-center gap-3">
+              <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-card bg-white">
+                <img src={asset.imageUrl} alt={asset.name} className="h-full w-full object-cover" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-semibold text-ink">查看原图</span>
+                <span className="mt-1 block truncate text-sm text-muted">{asset.imageUrl}</span>
+              </span>
+            </span>
+          </button>
+        )}
         {error && <div className="rounded-card border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral">{error}</div>}
         <div className="flex justify-between gap-3">
           <button onClick={() => void remove()} className="inline-flex items-center gap-2 rounded-card border border-coral/30 px-4 py-2 font-semibold text-coral">
             <Trash2 size={16} />
             删除
           </button>
-          <button onClick={() => void save()} className="rounded-card bg-ink px-5 py-2 font-semibold text-white">
-            保存资产
-          </button>
+          <div className="flex flex-wrap justify-end gap-2">
+            {asset.id && ["role", "scene", "prop"].includes(asset.assetType) && (
+              <button
+                type="button"
+                onClick={() => props.onRegenerateImage?.(asset.id)}
+                className="inline-flex items-center gap-2 rounded-card border border-line px-4 py-2 font-semibold text-ink"
+              >
+                <ImageIcon size={16} />
+                重生成图片
+              </button>
+            )}
+            <button onClick={() => void save()} className="rounded-card bg-ink px-5 py-2 font-semibold text-white">
+              保存资产
+            </button>
+          </div>
         </div>
       </div>
     </Modal>
   );
 }
 
-function StoryboardModal(props: { storyboard: StoryboardRecord; onClose: () => void; onSaved: () => void }) {
+function StoryboardModal(props: {
+  storyboard: StoryboardRecord;
+  onClose: () => void;
+  onSaved: () => void;
+  onRegenerateImage?: (storyboardId: string) => void;
+}) {
   const [shot, setShot] = useState(props.storyboard);
   const [error, setError] = useState("");
 
@@ -1201,12 +1381,56 @@ function StoryboardModal(props: { storyboard: StoryboardRecord; onClose: () => v
             <Trash2 size={16} />
             删除
           </button>
-          <button onClick={() => void save()} className="rounded-card bg-ink px-5 py-2 font-semibold text-white">
-            保存分镜
-          </button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => props.onRegenerateImage?.(shot.id)}
+              className="inline-flex items-center gap-2 rounded-card border border-line px-4 py-2 font-semibold text-ink"
+            >
+              <ImageIcon size={16} />
+              重生成图片
+            </button>
+            <button onClick={() => void save()} className="rounded-card bg-ink px-5 py-2 font-semibold text-white">
+              保存分镜
+            </button>
+          </div>
         </div>
       </div>
     </Modal>
+  );
+}
+
+function ImagePreviewModal({ preview, onClose }: { preview: ImagePreview; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/80 p-4" onClick={onClose}>
+      <div
+        className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-card bg-white shadow-work"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-line bg-white px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold text-ink">{preview.title}</h2>
+            {preview.subtitle && <p className="mt-0.5 text-sm text-muted">{preview.subtitle}</p>}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={preview.imageUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-card border border-line px-3 py-2 text-sm font-semibold text-ink hover:border-teal/40"
+            >
+              打开原图
+            </a>
+            <button onClick={onClose} className="rounded-card border border-line p-2 text-muted hover:text-ink" aria-label="关闭图片预览">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-ink p-4">
+          <img src={preview.imageUrl} alt={preview.title} className="max-h-[82vh] max-w-full object-contain" />
+        </div>
+      </div>
+    </div>
   );
 }
 

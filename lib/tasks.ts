@@ -17,6 +17,8 @@ type CreateTaskInput = {
   clientMessage?: string;
 };
 
+type CreateDeferredTaskInput = Omit<CreateTaskInput, "payload">;
+
 export async function createGenerationTask(input: CreateTaskInput) {
   return prisma.generationTask.create({
     data: {
@@ -31,6 +33,68 @@ export async function createGenerationTask(input: CreateTaskInput) {
       },
       status: "running",
       progress: 12
+    }
+  });
+}
+
+export async function createDeferredGenerationTask(input: CreateDeferredTaskInput) {
+  return prisma.generationTask.create({
+    data: {
+      projectId: input.projectId,
+      taskType: input.taskType,
+      provider: input.provider || "pending",
+      inputJson: input.inputJson,
+      outputJson: {
+        applied: false,
+        clientMessage: input.clientMessage || ""
+      },
+      status: "running",
+      progress: 12
+    }
+  });
+}
+
+export async function completeGenerationTask(
+  taskId: string,
+  input: { payload: Prisma.InputJsonValue; provider?: string; inputJson?: Prisma.InputJsonValue }
+) {
+  const existing = await prisma.generationTask.findUnique({ where: { id: taskId } });
+  if (!existing) {
+    return null;
+  }
+
+  const envelope = (existing.outputJson || {}) as TaskEnvelope;
+  const task = await prisma.generationTask.update({
+    where: { id: taskId },
+    data: {
+      provider: input.provider || existing.provider,
+      inputJson: input.inputJson ?? ((existing.inputJson || {}) as Prisma.InputJsonValue),
+      outputJson: {
+        ...envelope,
+        applied: false,
+        payload: input.payload
+      } as Prisma.InputJsonValue,
+      status: "running",
+      progress: Math.max(existing.progress, 92)
+    },
+    include: {
+      project: {
+        include: {
+          storyboards: { orderBy: { shotNo: "asc" } }
+        }
+      }
+    }
+  });
+
+  return applyTaskOutput(task);
+}
+
+export async function failGenerationTask(taskId: string, error: unknown) {
+  return prisma.generationTask.update({
+    where: { id: taskId },
+    data: {
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "任务执行失败"
     }
   });
 }
@@ -58,6 +122,22 @@ export async function advanceGenerationTask(taskId: string, userId: string) {
   const age = Date.now() - task.createdAt.getTime();
   if (age < 1200) {
     const progress = Math.min(92, Math.max(task.progress, 18 + Math.floor(age / 18)));
+    return prisma.generationTask.update({
+      where: { id: task.id },
+      data: { status: "running", progress },
+      include: {
+        project: {
+          include: {
+            storyboards: { orderBy: { shotNo: "asc" } }
+          }
+        }
+      }
+    });
+  }
+
+  const envelope = (task.outputJson || {}) as TaskEnvelope;
+  if (!Object.prototype.hasOwnProperty.call(envelope, "payload")) {
+    const progress = Math.min(92, Math.max(task.progress, 72 + Math.floor((age - 1200) / 1500)));
     return prisma.generationTask.update({
       where: { id: task.id },
       data: { status: "running", progress },
@@ -176,13 +256,37 @@ async function applyTaskOutput(task: any) {
 
     if (task.taskType === "images") {
       for (const item of payload.images || []) {
-        if (item.storyboardId) {
+        const storyboardId = item.storyboardId || item.targetId;
+        if (storyboardId) {
           await prisma.storyboard.update({
-            where: { id: item.storyboardId },
-            data: { imageUrl: item.imageUrl, status: item.status || "image_ready" }
+            where: { id: storyboardId },
+            data: {
+              imageUrl: item.imageUrl || undefined,
+              videoUrl: item.imageUrl ? null : undefined,
+              status: item.status || (item.imageUrl ? "image_ready" : "image_failed")
+            }
           });
         }
       }
+    }
+
+    if (task.taskType === "asset_images") {
+      for (const item of payload.assetImages || []) {
+        if (item.targetId) {
+          await prisma.asset.update({
+            where: { id: item.targetId },
+            data: {
+              imageUrl: item.imageUrl || undefined,
+              status: item.status || (item.imageUrl ? "image_ready" : "image_failed")
+            }
+          });
+        }
+      }
+
+      await prisma.project.update({
+        where: { id: task.projectId },
+        data: { currentStep: "assets", status: "in_progress" }
+      });
     }
 
     if (task.taskType === "videos") {

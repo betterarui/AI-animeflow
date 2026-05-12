@@ -14,12 +14,12 @@ type ProjectResponse = {
 
 export function CreateProjectForm() {
   const router = useRouter();
-  const [title, setTitle] = useState("全民反诈守护");
-  const [description, setDescription] = useState("呆萌小男孩小呆连续遇到红包链接和扫码领红包骗局，在关键一秒识破套路，记住陌生链接不乱点，不明二维码不扫描。");
-  const [type, setType] = useState("education");
+  const [title, setTitle] = useState("我的创意短片");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState("short");
   const [aspectRatio, setAspectRatio] = useState("9:16");
   const [durationTarget, setDurationTarget] = useState("30-60s");
-  const [stylePreset, setStylePreset] = useState("儿童反诈漫画短视频");
+  const [stylePreset, setStylePreset] = useState("电影感国漫");
   const [creationMode, setCreationMode] = useState("AI 协作");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

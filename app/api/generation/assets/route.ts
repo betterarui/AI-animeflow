@@ -1,8 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { mockProvider } from "@/lib/ai/providers/mockProvider";
-import { createGenerationTask } from "@/lib/tasks";
+import { textGenerationProvider } from "@/lib/ai/textGenerationProvider";
+import { completeGenerationTask, createDeferredGenerationTask, failGenerationTask } from "@/lib/tasks";
 import { badRequest, notFound, ok, readJson, serverError, unauthorized } from "@/lib/http";
 
 type Body = {
@@ -26,14 +26,26 @@ export async function POST(request: Request) {
     }
 
     const scriptContent = project.script?.scriptContent || project.description || project.title;
-    const assets = mockProvider.extractAssetsFromScript({ scriptContent, project });
-    const task = await createGenerationTask({
+    const task = await createDeferredGenerationTask({
       projectId: project.id,
       taskType: "assets",
-      inputJson: { scriptId: project.script?.id || null } as Prisma.InputJsonValue,
-      payload: { assets } as Prisma.InputJsonValue,
+      inputJson: { scriptId: project.script?.id || null, provider: "pending" } as Prisma.InputJsonValue,
+      provider: "text-generation:pending",
       clientMessage: "资产生成完成后会写入 assets 表"
     });
+
+    void (async () => {
+      try {
+        const generation = await textGenerationProvider.extractAssetsFromScript({ scriptContent, project });
+        await completeGenerationTask(task.id, {
+          inputJson: { scriptId: project.script?.id || null, provider: generation.provider } as Prisma.InputJsonValue,
+          payload: { assets: generation.payload } as Prisma.InputJsonValue,
+          provider: generation.provider
+        });
+      } catch (error) {
+        await failGenerationTask(task.id, error);
+      }
+    })();
 
     return ok({ task }, { status: 202 });
   } catch (error) {

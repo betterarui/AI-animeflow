@@ -54,10 +54,10 @@ export async function POST(request: Request) {
         userId: user.id,
         title,
         description: body.description || "",
-        type: body.type || "education",
+        type: body.type || "short",
         aspectRatio: body.aspectRatio || "9:16",
         durationTarget: body.durationTarget || "30-60s",
-        stylePreset: body.stylePreset || "儿童反诈漫画短视频",
+        stylePreset: body.stylePreset || "电影感国漫",
         creationMode: body.creationMode || "AI 协作"
       }
     });

@@ -24,13 +24,6 @@ type RenderProject = {
   title: string;
 };
 
-const fallbackImages = [
-  "/assets/fanzha/场景1.jpg",
-  "/assets/fanzha/角色1.jpg",
-  "/assets/fanzha/角色2.jpg",
-  "/assets/fanzha/场景2.jpg"
-];
-
 function getFfmpegPath() {
   const candidates = [
     typeof ffmpegPath === "string" ? ffmpegPath : "",
@@ -50,16 +43,7 @@ async function assertReadable(filePath: string) {
 }
 
 function pickImage(shot: RenderStoryboard) {
-  const direct = publicAssetPath(shot.imageUrl);
-  if (direct) {
-    return direct;
-  }
-  const fallback = fallbackImages[(Math.max(shot.shotNo, 1) - 1) % fallbackImages.length];
-  const resolved = publicAssetPath(fallback);
-  if (!resolved) {
-    throw new Error("缺少可用的分镜图片资源");
-  }
-  return resolved;
+  return publicAssetPath(shot.imageUrl);
 }
 
 function clipFileName(shot: RenderStoryboard) {
@@ -87,30 +71,52 @@ export async function renderStoryboardVideos(projectId: string, storyboards: Ren
   const rendered = [];
 
   for (const shot of storyboards) {
-    const imagePath = await assertReadable(pickImage(shot));
+    const pickedImage = pickImage(shot);
+    const imagePath = pickedImage ? await assertReadable(pickedImage) : null;
     const outputPath = path.join(dir, clipFileName(shot));
     const duration = Math.max(2, Math.min(20, Number(shot.durationSeconds) || 6));
 
-    await runFfmpeg([
-      "-y",
-      "-loop",
-      "1",
-      "-t",
-      String(duration),
-      "-i",
-      imagePath,
-      "-vf",
-      "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
-      "-r",
-      "24",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "veryfast",
-      "-movflags",
-      "+faststart",
-      outputPath
-    ]);
+    const args = imagePath
+      ? [
+          "-y",
+          "-loop",
+          "1",
+          "-t",
+          String(duration),
+          "-i",
+          imagePath,
+          "-vf",
+          "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+          "-r",
+          "24",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-movflags",
+          "+faststart",
+          outputPath
+        ]
+      : [
+          "-y",
+          "-f",
+          "lavfi",
+          "-i",
+          `color=c=0f172a:s=720x1280:d=${duration}`,
+          "-vf",
+          "format=yuv420p",
+          "-r",
+          "24",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-movflags",
+          "+faststart",
+          outputPath
+        ];
+
+    await runFfmpeg(args);
 
     rendered.push({
       storyboardId: shot.id,
