@@ -88,3 +88,7 @@ SQLite 数据库会生成在 `prisma/dev.db`。当前 Windows 环境下 Prisma `
 ## 项目说明
 
 仓库中原有的 `index.html`、`app.js`、`style.css` 和 `assets/` 已保留；新的 MVP 运行入口由 Next.js 接管。静态素材已复制到 `public/assets`，供新工作台使用。
+
+---
+
+© 2026 betterarui. All rights reserved.
