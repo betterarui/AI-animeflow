@@ -1,0 +1,21 @@
+<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="640" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF2FF"/>
+      <stop offset="1" stop-color="#FFF1E5"/>
+    </linearGradient>
+    <linearGradient id="line" x1="100" y1="52" x2="540" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0066FF"/>
+      <stop offset="1" stop-color="#FF7A00"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="624" height="344" rx="24" fill="url(#bg)" stroke="#B8D0FF" stroke-width="4"/>
+  <rect x="92" y="52" width="456" height="8" rx="4" fill="url(#line)"/>
+  <rect x="92" y="78" width="180" height="14" rx="7" fill="#0066FF" fill-opacity="0.18"/>
+  <rect x="92" y="102" width="256" height="14" rx="7" fill="#FF7A00" fill-opacity="0.16"/>
+  <rect x="92" y="126" width="220" height="14" rx="7" fill="#0066FF" fill-opacity="0.12"/>
+  <rect x="92" y="174" width="456" height="126" rx="16" fill="#FFFFFF" stroke="#C9DAFF" stroke-width="2"/>
+  <circle cx="164" cy="237" r="32" fill="#0066FF" fill-opacity="0.14"/>
+  <circle cx="476" cy="237" r="32" fill="#FF7A00" fill-opacity="0.16"/>
+  <text x="320" y="246" text-anchor="middle" fill="#1D3560" font-size="26" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif">+g P`Mþ</text>
+</svg>
