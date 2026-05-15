@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Blocks, CheckCircle2, Clapperboard, Database, ShieldCheck, Sparkles } from "lucide-react";
+import ParticleBackground from "@/components/particle-background";
 
 const steps = [
   { title: "剧本创作", text: "从创意输入到结构化剧本，自动梳理人物设定、剧情节奏、对白和分场说明。" },
@@ -17,8 +18,9 @@ const capabilities = [
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+    <main className="relative min-h-screen">
+      <ParticleBackground />
+      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
         <Link href="/" className="flex items-center gap-3">
           <img src="/assets/images/logo/logo-latest.png" alt="AnimeFlow" className="brand-logo" />
         </Link>
@@ -32,30 +34,30 @@ export default function HomePage() {
         </nav>
       </header>
 
-      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 pb-10 pt-4 lg:grid-cols-[1fr_520px] lg:items-center">
+      <section className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 pb-10 pt-4 lg:grid-cols-[1fr_520px] lg:items-center">
         <div className="py-8">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-3 py-1 text-sm font-medium text-ink">
+          <div className="glow-on-hover mb-5 inline-flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-3 py-1 text-sm font-medium text-ink">
             <Sparkles size={16} />
             AI 漫剧生产平台
           </div>
-          <h1 className="max-w-4xl text-4xl font-semibold leading-tight tracking-normal text-ink md:text-6xl">
+          <h1 className="max-w-4xl bg-gradient-to-r from-white via-amber to-white bg-clip-text text-4xl font-semibold leading-tight tracking-normal text-transparent md:text-6xl">
             从一个创意到可交付成片的 AI 内容生产工作台
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
             AnimeFlow 将需求输入、剧本创作、资产管理、分镜设计、创意审查、视频生成和剪辑导出纳入同一套可追踪生产系统，帮助团队稳定完成从策划到交付的全流程制作。
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/register" className="inline-flex items-center gap-2 rounded-card bg-ink px-5 py-3 font-semibold text-white">
+            <Link href="/register" className="border-glow glow-on-hover inline-flex items-center gap-2 rounded-card bg-ink px-5 py-3 font-semibold text-white">
               开始创作
               <ArrowRight size={18} />
             </Link>
-            <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-card border border-line bg-white px-5 py-3 font-semibold text-ink">
+            <Link href="/dashboard" className="border-glow inline-flex items-center gap-2 rounded-card border border-line bg-white px-5 py-3 font-semibold text-ink">
               进入工作台
             </Link>
           </div>
         </div>
 
-        <div className="panel overflow-hidden">
+        <div className="border-glow panel overflow-hidden">
           <div className="border-b border-line bg-ink px-5 py-4 text-white">
             <div className="flex items-center justify-between">
               <div>
@@ -68,8 +70,8 @@ export default function HomePage() {
           </div>
           <div className="clip-grid grid gap-4 p-5">
             {steps.map((step, index) => (
-              <div key={step.title} className="grid grid-cols-[44px_1fr] gap-3 rounded-card border border-line bg-white p-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-card bg-teal/10 text-sm font-bold text-teal">
+              <div key={step.title} className="border-glow grid grid-cols-[44px_1fr] gap-3 rounded-card border border-line bg-white p-4">
+                <div className="glow-on-hover flex h-11 w-11 items-center justify-center rounded-card bg-teal/10 text-sm font-bold text-teal">
                   {String(index + 1).padStart(2, "0")}
                 </div>
                 <div>
@@ -82,12 +84,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-6 pb-14 md:grid-cols-3">
+      <section className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-4 px-6 pb-14 md:grid-cols-3">
         {capabilities.map((item) => {
           const Icon = item.icon;
           return (
-            <article key={item.title} className="panel p-5">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-card bg-coral/10 text-coral">
+            <article key={item.title} className="border-glow panel p-5">
+              <div className="glow-on-hover mb-4 flex h-10 w-10 items-center justify-center rounded-card bg-coral/10 text-coral">
                 <Icon size={20} />
               </div>
               <h3 className="text-lg font-semibold text-ink">{item.title}</h3>
@@ -97,7 +99,7 @@ export default function HomePage() {
         })}
       </section>
 
-      <section className="border-t border-line bg-white/75">
+      <section className="relative z-10 border-t border-line bg-white/75">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-6 py-8 md:grid-cols-3">
           {["审查可控", "进度可追踪", "成片可交付"].map((item) => (
             <div key={item} className="flex items-center gap-3">
