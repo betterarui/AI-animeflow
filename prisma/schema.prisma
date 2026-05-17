@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  nickname     String
+  role         String   @default("creator")
+  status       String   @default("active")
+  dailyQuota   Int      @default(100) @map("daily_quota")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  projects Project[]
+  inviteCodesCreated InviteCode[] @relation("InviteCodesCreated")
+  inviteCodesUsed    InviteCode[] @relation("InviteCodesUsed")
+
+  @@map("users")
+}
+
+model InviteCode {
+  id          String    @id @default(cuid())
+  codeHash    String    @unique @map("code_hash")
+  codeValue   String?   @map("code_value")
+  codePrefix  String    @map("code_prefix")
+  status      String    @default("unused")
+  targetEmail String?   @map("target_email")
+  note        String    @default("")
+  createdById String    @map("created_by_id")
+  usedById    String?   @map("used_by_id")
+  usedEmail   String?   @map("used_email")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  usedAt      DateTime? @map("used_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  createdBy User  @relation("InviteCodesCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  usedBy    User? @relation("InviteCodesUsed", fields: [usedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([targetEmail])
+  @@index([createdById])
+  @@index([usedById])
+  @@index([createdAt])
+  @@map("invite_codes")
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  title          String
+  description    String   @default("")
+  type           String
+  aspectRatio    String   @map("aspect_ratio")
+  durationTarget String   @map("duration_target")
+  stylePreset    String   @map("style_preset")
+  creationMode   String   @map("creation_mode")
+  currentStep    String   @default("script") @map("current_step")
+  status         String   @default("draft")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  script          Script?
+  assets          Asset[]
+  storyboards     Storyboard[]
+  generationTasks GenerationTask[]
+  reviewReports   ReviewReport[]
+  exports         Export[]
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model Script {
+  id            String   @id @default(cuid())
+  projectId     String   @unique @map("project_id")
+  originalIdea  String   @default("") @map("original_idea")
+  scriptContent String   @default("") @map("script_content")
+  version       Int      @default(1)
+  status        String   @default("draft")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("scripts")
+}
+
+model Asset {
+  id           String   @id @default(cuid())
+  projectId    String   @map("project_id")
+  assetType    String   @map("asset_type")
+  name         String
+  description  String   @default("")
+  prompt       String   @default("")
+  imageUrl     String?  @map("image_url")
+  audioUrl     String?  @map("audio_url")
+  metadataJson Json?    @map("metadata_json")
+  status       String   @default("draft")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("assets")
+}
+
+model Storyboard {
+  id                String   @id @default(cuid())
+  projectId         String   @map("project_id")
+  shotNo            Int      @map("shot_no")
+  sceneName         String   @map("scene_name")
+  charactersJson    Json     @map("characters_json")
+  visualDescription String   @map("visual_description")
+  dialogue          String   @default("")
+  cameraMovement    String   @map("camera_movement")
+  durationSeconds   Int      @map("duration_seconds")
+  imagePrompt       String   @map("image_prompt")
+  imageUrl          String?  @map("image_url")
+  videoUrl          String?  @map("video_url")
+  status            String   @default("draft")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("storyboards")
+}
+
+model GenerationTask {
+  id           String   @id @default(cuid())
+  projectId    String   @map("project_id")
+  taskType     String   @map("task_type")
+  provider     String   @default("mock") 
+  inputJson    Json     @map("input_json")
+  outputJson   Json?    @map("output_json")
+  status       String   @default("pending")
+  progress     Int      @default(0)
+  errorMessage String?  @map("error_message")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("generation_tasks")
+}
+
+model ReviewReport {
+  id              String   @id @default(cuid())
+  projectId       String   @map("project_id")
+  targetType      String   @map("target_type")
+  targetId        String?  @map("target_id")
+  score           Int
+  riskLevel       String   @map("risk_level")
+  issuesJson      Json     @map("issues_json")
+  suggestionsJson Json     @map("suggestions_json")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("review_reports")
+}
+
+model Export {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  fileUrl   String   @map("file_url")
+  format    String
+  status    String   @default("completed")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("exports")
+}

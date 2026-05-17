@@ -1,0 +1,30 @@
+{
+  "logo_1_original": [
+    1280,
+    720
+  ],
+  "logo_1_crop": [
+    1048,
+    197
+  ],
+  "logo_1x": [
+    360,
+    68
+  ],
+  "logo_2x": [
+    720,
+    136
+  ],
+  "logo_3x": [
+    1080,
+    204
+  ],
+  "assets": [
+    "D:\\project\\Aimanju\\frontend-demo\\assets\\images\\logo\\logo@1x.png",
+    "D:\\project\\Aimanju\\frontend-demo\\assets\\images\\logo\\logo@2x.png",
+    "D:\\project\\Aimanju\\frontend-demo\\assets\\images\\logo\\logo@3x.png",
+    "D:\\project\\Aimanju\\frontend-demo\\assets\\images\\logo\\logo-before-after.png",
+    "D:\\project\\Aimanju\\frontend-demo\\reports\\palette-report.md",
+    "D:\\project\\Aimanju\\frontend-demo\\reports\\color-proposal.zip"
+  ]
+}

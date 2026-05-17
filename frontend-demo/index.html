@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>爱漫剧 · 创作工作台</title>
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./styles/tokens/colors-v2.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="global-header" data-module="Header_TopBar">
+      <div class="title-wrap">
+        <h1 class="brand-title">
+          <img
+            id="brandLogo"
+            class="brand-logo"
+            src="./assets/images/logo/logo-latest.png"
+            alt="AnimeFlow Logo"
+            width="360"
+            height="68"
+            decoding="async"
+            fetchpriority="high"
+          />
+          <span class="sr-only">AnimeFlow</span>
+        </h1>
+      </div>
+
+      <nav id="stepNav" class="step-nav" aria-label="五步工作流" data-module="Nav_StepBar">
+        <button class="step-item is-active" data-step="script" type="button">
+          <span class="step-index">01</span>
+          <span class="step-name">剧本创作</span>
+        </button>
+        <button class="step-item is-locked" data-step="asset" type="button" disabled>
+          <span class="step-index">02</span>
+          <span class="step-name">资产打造</span>
+        </button>
+        <button class="step-item is-locked" data-step="storyboard" type="button" disabled>
+          <span class="step-index">03</span>
+          <span class="step-name">分镜落地</span>
+        </button>
+        <button class="step-item is-locked" data-step="video" type="button" disabled>
+          <span class="step-index">04</span>
+          <span class="step-name">视频生成</span>
+        </button>
+        <button class="step-item is-locked" data-step="edit" type="button" disabled>
+          <span class="step-index">05</span>
+          <span class="step-name">剪辑精修</span>
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <button id="previewBtn" class="ghost-btn btn-preview" type="button">预览成片</button>
+      </div>
+    </header>
+
+    <main class="main-container" data-module="Content_Grid">
+      
+      <!-- 左侧：沉浸式对话区 -->
+      <aside id="leftPane" class="left-pane" data-module="Main_Workspace">
+        <section id="prechatPanel" class="prechat-panel">
+          <div class="mentor-card">
+            <div class="mentor-meta">
+              <img class="mentor-avatar" src="./assets/images/avatar/miaodao.png" alt="喵导头像" />
+              <div class="mentor-text">
+                <h3>喵导</h3>
+                <p>AI漫剧导师 · 专业创作协作</p>
+              </div>
+            </div>
+            <button id="startWorkBtn" class="primary-btn start-work-btn" type="button" disabled>开工</button>
+          </div>
+          <div class="todo-panel">
+            <p class="todo-title">待完成 AI 漫剧任务（先选 1 项）</p>
+            <div id="todoTaskList" class="todo-task-list"></div>
+            <section class="todo-calendar-book" aria-label="交付日历本">
+              <div class="todo-calendar-head">
+                <h4 id="todoCalendarTitle">交付日历本</h4>
+                <span class="todo-calendar-tip">橙色为交付日</span>
+              </div>
+              <div class="todo-calendar-weekdays">
+                <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+              </div>
+              <div id="todoCalendarGrid" class="todo-calendar-grid"></div>
+            </section>
+          </div>
+        </section>
+
+        <div id="chatWorkspace" class="chat-workspace is-hidden">
+          <div class="left-pane-header">
+            <div class="mode-switcher" data-module="Header_ModeSwitch">
+              <button id="modeBtnC" class="mode-btn" type="button">Basic</button>
+              <button id="modeBtnB" class="mode-btn is-active" type="button">Pro</button>
+            </div>
+            <button id="saveBtn" class="ghost-btn btn-sm" type="button">保存</button>
+          </div>
+
+          <div id="chatMessages" class="chat-messages" aria-live="polite" data-module="Workspace_ChatLog"></div>
+          <div id="chatHistoryResizer" class="chat-history-resizer" aria-hidden="true"></div>
+
+          <div class="chat-input-wrap" data-module="Workspace_Input">
+            <div class="trae-input-container">
+              <textarea
+                id="chatInput"
+                rows="3"
+                placeholder="请输入你的制作目标、题材和风格，我将以导师方式协助你完成AI漫剧创作&#10;点击对话框或按&quot;/&quot;输入对话内容&#10;enter换行，ctrl+enter发送"
+              ></textarea>
+              <div class="trae-input-footer">
+                <div class="footer-left-group">
+                  <button id="returnHomeBtn" class="ghost-btn btn-sm" type="button">返回</button>
+                  <div class="input-dropdowns">
+                    <div class="dropdown-wrap">
+                      <button id="modelDropdownBtn" class="dropdown-btn" type="button" aria-expanded="false">通用模版</button>
+                      <div id="modelDropdownMenu" class="dropdown-menu" role="menu">
+                        <button type="button" class="dropdown-item" data-template="漫剧">漫剧</button>
+                        <button type="button" class="dropdown-item" data-template="短视频">短视频</button>
+                        <button type="button" class="dropdown-item" data-template="文旅">文旅</button>
+                        <button type="button" class="dropdown-item" data-template="教育">教育</button>
+                        <button type="button" class="dropdown-item" data-template="科普">科普</button>
+                        <button type="button" class="dropdown-item" data-template="出海">出海</button>
+                      </div>
+                    </div>
+                    <div class="dropdown-wrap">
+                      <button id="templateDropdownBtn" class="dropdown-btn" type="button">素材库</button>
+                    </div>
+                  </div>
+                </div>
+                <button id="sendBtn" class="trae-send-btn" type="button" title="Send (Cmd+Enter)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 拖拽分割线 -->
+      <div id="dragMe" class="resizer"></div>
+
+      <!-- 右侧：可视化工作台 -->
+      <section id="rightPane" class="right-pane" data-module="Right_Canvas">
+        <div class="canvas-header">
+          <h2 id="stageTitle">喵导偷吃小鱼干中……</h2>
+          <div class="head-actions" data-module="Workspace_Status">
+            <div class="history-dropdown-wrap">
+              <button id="versionBtn" class="status-btn" type="button" aria-expanded="false" title="版本回滚">⟲ 版本回滚</button>
+              <div id="versionMenu" class="status-menu" role="menu">
+                <button type="button" class="status-menu-item" data-version="v1 初稿">v1 初稿</button>
+                <button type="button" class="status-menu-item" data-version="v2 改稿">v2 改稿</button>
+                <button type="button" class="status-menu-item" data-version="v3 当前">v3 当前</button>
+              </div>
+            </div>
+            <button
+              id="processBtn"
+              class="audit-status audit-pass"
+              type="button"
+              data-tooltip="剧情连贯 86（通过）&#10;镜头衔接 72（警告）&#10;资产完整 74（警告）"
+            >
+              <span class="status-dot"></span>
+              流程检查
+            </button>
+            <div
+              id="riskBtn"
+              class="audit-status audit-warn"
+              data-tooltip="存在敏感词，请修改"
+            >
+              <span class="status-dot"></span>
+              合规警告
+            </div>
+          </div>
+        </div>
+
+        <div id="canvasPlaceholder" class="canvas-content-placeholder">
+          <div class="logo-film-flow" aria-hidden="true">
+            <div class="film-strip film-strip-top"></div>
+            <div class="film-strip film-strip-bottom"></div>
+          </div>
+          <div class="film-logo-frame">
+            <img
+              class="canvas-default-logo"
+              src="./assets/images/logo/logo-full-clear.jpg"
+              alt="完整logo清晰版"
+              decoding="async"
+              loading="lazy"
+            />
+          </div>
+        </div>
+        <section id="scriptNotebook" class="script-notebook is-hidden" aria-label="剧本笔记本">
+          <div class="script-notebook-head">
+            <h3>漫剧脚本工作页</h3>
+            <span>Draft v1.0</span>
+          </div>
+          <div class="script-notebook-body">
+            <p><strong>片名：</strong>《全民反诈守护》</p>
+            <p><strong>集数：</strong>EP01（本次交付）</p>
+            <p><strong>场次：</strong>S01-01 不明二维码不扫描</p>
+            <hr />
+            <p><strong>[画面]</strong> 暖黄客厅里，小呆刷手机时收到红包链接，指尖悬停瞬间弹出蓝色盾牌气泡。</p>
+            <p><strong>[台词]</strong> 小呆：不对！陌生链接不乱点！</p>
+            <p><strong>[动作]</strong> 小呆收回手并锁屏，随后转场到街角奶茶店，被“扫码领红包”广告牌吸引。</p>
+            <p><strong>[音效]</strong> 手机提示音 + 轻快漫画节奏 + 结尾反诈口诀旁白。</p>
+            <p><strong>[转场]</strong> 手机亮屏 Match Cut 至奶茶店二维码广告牌。</p>
+            <p><strong>[导演备注]</strong> 本段重心是“陌生链接不乱点 + 不明二维码不扫描”，提示语保持短促好记。</p>
+          </div>
+        </section>
+        <section id="assetNotebook" class="asset-notebook is-hidden" aria-label="资产打造设定页">
+          <div class="asset-notebook-head">
+            <h3>角色资产设定页（儿童反诈漫画短视频）</h3>
+            <span>Asset Draft v1.0</span>
+          </div>
+          <div class="asset-notebook-body">
+            <section class="asset-block">
+              <h4>角色主档案</h4>
+              <p><strong>角色名：</strong>小呆</p>
+              <p><strong>定位：</strong>主角 / 呆萌小男孩 / 儿童反诈学习线</p>
+              <p><strong>身份：</strong>蓝色小熊卫衣男孩　<strong>气质：</strong>好奇、可爱、关键时刻清醒</p>
+              <p><strong>外观关键词：</strong>黑色卷发、蓝色小熊卫衣、圆眼睛、清新漫画线条</p>
+            </section>
+
+            <section class="asset-block">
+              <h4>N视图绘制区</h4>
+              <div class="nview-grid">
+                <article class="nview-card"><h5>正视图</h5><p>蓝色小熊卫衣、圆眼睛、清醒表情</p><button type="button">上传/绘制</button></article>
+                <article class="nview-card"><h5>侧视图</h5><p>拿手机停顿、收回手、锁屏动作</p><button type="button">上传/绘制</button></article>
+                <article class="nview-card"><h5>背视图</h5><p>离开奶茶店的背影与摆手动作</p><button type="button">上传/绘制</button></article>
+                <article class="nview-card"><h5>3/4 视图</h5><p>犹豫、警觉、坚定拒绝的表演角度</p><button type="button">上传/绘制</button></article>
+              </div>
+            </section>
+
+            <section class="asset-block">
+              <h4>人物小传</h4>
+              <p>
+                小呆是一个好奇心很强的孩子，容易被红包、福利和新鲜提示吸引。遇到陌生链接时，他会先被诱惑，
+                但在盾牌气泡和自我提醒出现后立刻停手；面对奶茶店门口的不明二维码，他也能在扫码前一秒清醒拒绝。
+              </p>
+            </section>
+
+            <section class="asset-block">
+              <h4>服化道与资产约束</h4>
+              <p><strong>主服装：</strong>蓝色小熊卫衣 + 深色运动裤 + 白色鞋子</p>
+              <p><strong>关键道具：</strong>手机、红包链接、蓝色盾牌气泡、扫码领红包广告牌</p>
+              <p><strong>统一规则：</strong>所有镜头突出陌生链接、不明二维码、拒绝扫码和反诈口诀</p>
+            </section>
+          </div>
+        </section>
+        <section id="storyboardNotebook" class="storyboard-notebook is-hidden" aria-label="分镜落地笔记本">
+          <div class="storyboard-head">
+            <h3>分镜落地单（docx 对齐版）</h3>
+            <span>Storyboard v1.0</span>
+          </div>
+          <div class="storyboard-body">
+            <article class="story-shot">
+              <header>
+                <h4>镜头 01</h4>
+                <span>时长 6s</span>
+              </header>
+              <p><strong>景别/角度：</strong>俯拍 / 客厅缓推</p>
+              <p><strong>画面：</strong>小呆在暖黄客厅刷手机，红包图标弹出，盾牌气泡提醒他停手。</p>
+              <p><strong>运镜：</strong>俯拍缓推进入客厅，快速推近手机屏幕，再切到小呆清醒摇头。</p>
+              <p><strong>台词/音效：</strong>“不对！陌生链接不乱点！”；手机提示音轻响。</p>
+              <p><strong>转场：</strong>锁屏动作 Match Cut 到镜头 02。</p>
+            </article>
+            <article class="story-shot">
+              <header>
+                <h4>镜头 02</h4>
+                <span>时长 11s</span>
+              </header>
+              <p><strong>景别/角度：</strong>低角度跟拍 / 街道转场</p>
+              <p><strong>画面：</strong>小呆从客厅出门来到街角奶茶店，诈骗精从广告牌后探头诱导扫码。</p>
+              <p><strong>运镜：</strong>低角度跟拍起身出门，滑动转场至奶茶店，定格广告牌和诈骗精探头动作。</p>
+              <p><strong>台词/音效：</strong>“用手机扫一下，红包秒到账～”；小呆重复：“用手机扫一下……”</p>
+              <p><strong>转场：</strong>广告牌二维码擦切至手机屏幕特写。</p>
+            </article>
+            <article class="story-shot">
+              <header>
+                <h4>镜头 03</h4>
+                <span>时长 10s</span>
+              </header>
+              <p><strong>景别/角度：</strong>手机特写 / 急速拉远</p>
+              <p><strong>画面：</strong>手机即将识别二维码，小呆突然警觉，收回手机并锁屏，诈骗精当场崩溃。</p>
+              <p><strong>运镜：</strong>手机屏幕特写对准二维码，随后急速拉远并轻微晃动。</p>
+              <p><strong>台词/音效：</strong>“停！不明二维码不扫描！”；“啊——我的业绩！”</p>
+              <p><strong>转场：</strong>诈骗精崩溃动作硬切至阳光收束镜头。</p>
+            </article>
+            <article class="story-shot">
+              <header>
+                <h4>镜头 04</h4>
+                <span>时长 9s</span>
+              </header>
+              <p><strong>景别/角度：</strong>仰拍 / 背影慢推</p>
+              <p><strong>画面：</strong>小呆摆手离开，诈骗精泄气滚出画面，彩色反诈标语从天而降。</p>
+              <p><strong>运镜：</strong>仰拍小呆背影慢推，再上摇至天空，定格在反诈提醒画面。</p>
+              <p><strong>台词/音效：</strong>旁白：“反诈口诀刻心里，守住钱袋笑嘻嘻！”</p>
+              <p><strong>转场：</strong>定格为最终成片收束画面。</p>
+            </article>
+          </div>
+        </section>
+        <section id="videoNotebook" class="video-notebook is-hidden" aria-label="视频生成流水线笔记本">
+          <div class="video-notebook-head">
+            <h3>视频生成流水线（分镜自动汇总）</h3>
+            <span>Video Pipeline v1.0</span>
+          </div>
+          <div class="video-notebook-body">
+            <p class="video-note">已从“不明二维码不扫描”分镜 01-04 自动汇总为生成流水线。可在中间节点选择转场衔接策略。</p>
+            <div class="pipeline-strip">
+              <div class="pipeline-step">
+                <h4>镜头素材汇总</h4>
+                <p>小呆、诈骗精、客厅、奶茶店与二维码广告牌同步入列</p>
+              </div>
+              <div class="pipeline-link">→</div>
+              <div class="pipeline-step transition-step">
+                <h4>转场衔接选择</h4>
+                <div id="videoTransitionGroup" class="transition-choice-group">
+                  <button class="transition-choice-btn is-active" type="button" data-transition="Match Cut">Match Cut</button>
+                  <button class="transition-choice-btn" type="button" data-transition="运动擦切">运动擦切</button>
+                  <button class="transition-choice-btn" type="button" data-transition="叠化">叠化</button>
+                  <button class="transition-choice-btn" type="button" data-transition="Whip Pan">Whip Pan</button>
+                </div>
+              </div>
+              <div class="pipeline-link">→</div>
+              <div class="pipeline-step">
+                <h4>视频合成生成</h4>
+                <p>四段竖屏分镜、反诈口诀旁白和安全提醒合成为预览成片</p>
+              </div>
+            </div>
+            <div class="pipeline-summary">
+              <p><strong>当前衔接策略：</strong><span id="videoTransitionCurrent">Match Cut</span></p>
+              <p><strong>预计输出：</strong>竖屏预览版 / 时长约 00:31</p>
+            </div>
+          </div>
+        </section>
+        <section id="assetLibraryPanel" class="asset-library-panel is-hidden" aria-label="素材库">
+          <div class="asset-library-head">
+            <h3>素材库</h3>
+            <button id="assetLibraryBackBtn" class="ghost-btn btn-sm" type="button">返回画布</button>
+          </div>
+          <div class="asset-library-tabs">
+            <button class="asset-tab is-active" type="button" data-asset-type="剧本">剧本</button>
+            <button class="asset-tab" type="button" data-asset-type="角色">角色</button>
+            <button class="asset-tab" type="button" data-asset-type="场景">场景</button>
+            <button class="asset-tab" type="button" data-asset-type="风格">风格</button>
+            <button class="asset-tab" type="button" data-asset-type="模版">模版</button>
+          </div>
+          <div class="asset-library-grid">
+            <article class="asset-card" data-asset-type="剧本"><img class="asset-card-cover" src="./assets/fanzha/场景1.jpg" alt="陌生红包链接素材图" /><h4>不明二维码剧本</h4><p>红包链接与扫码诱导四段式结构</p><button class="add-asset-btn" type="button">添加</button></article>
+            <article class="asset-card" data-asset-type="角色"><img class="asset-card-cover" src="./assets/fanzha/角色1.jpg" alt="小呆角色素材图" /><h4>小呆角色设定</h4><p>蓝色小熊卫衣与警觉表演参考</p><button class="add-asset-btn" type="button">添加</button></article>
+            <article class="asset-card" data-asset-type="场景"><img class="asset-card-cover" src="./assets/fanzha/场景2.jpg" alt="街角奶茶店素材图" /><h4>奶茶店场景库</h4><p>扫码广告牌与街道转场氛围</p><button class="add-asset-btn" type="button">添加</button></article>
+            <article class="asset-card" data-asset-type="风格"><img class="asset-card-cover" src="./assets/fanzha/角色2.jpg" alt="诈骗精风格素材图" /><h4>诈骗精设定</h4><p>紫色马甲狐狸反派表演参考</p><button class="add-asset-btn" type="button">添加</button></article>
+            <article class="asset-card" data-asset-type="模版"><img class="asset-card-cover" src="./assets/fanzha/场景1.jpg" alt="竖屏反诈模板素材图" /><h4>竖屏反诈模板</h4><p>四段式儿童反诈短视频模板</p><button class="add-asset-btn" type="button">添加</button></article>
+          </div>
+        </section>
+        <section id="editSuitePanel" class="edit-suite-panel is-hidden" aria-label="剪辑精修面板">
+          <div class="edit-suite-head">
+            <h3>剪辑精修台</h3>
+            <div class="edit-head-actions">
+              <button id="editDeleteBtn" class="ghost-btn btn-sm" type="button" disabled>✂ 删除片段</button>
+              <button id="editTransitionBtn" class="ghost-btn btn-sm" type="button" disabled>⋈ 增加转场</button>
+              <button id="editRegenBtn" class="ghost-btn btn-sm" type="button" disabled>♻ 重生片段</button>
+            </div>
+          </div>
+          <div class="edit-video-wrap">
+            <video
+              id="editPreviewVideo"
+              class="edit-preview-video"
+              controls
+              preload="metadata"
+              src="./assets/fanzha/成片.mp4"
+            ></video>
+          </div>
+          <div class="edit-timeline-wrap">
+            <div class="edit-timeline-top">
+              <span>时间线进度</span>
+              <span id="editTimelineTime">00:00 / 00:00</span>
+            </div>
+            <div class="edit-timeline-track">
+              <div id="editTimelineProgress" class="edit-timeline-progress"></div>
+              <div id="editCutTrack" class="edit-cut-track"></div>
+            </div>
+            <div class="edit-cut-legend">
+              <span>✂ 拼接节点已自动标记</span>
+              <span>点击时间线可标记起点/终点，再执行删除或重生</span>
+            </div>
+          </div>
+        </section>
+
+        <div id="backpackDock" class="backpack-dock is-hidden">
+          <button id="backpackToggleBtn" class="backpack-toggle-btn" type="button">
+            背包
+            <span id="backpackCount" class="backpack-count">0</span>
+          </button>
+          <div id="backpackPanel" class="backpack-panel is-hidden">
+            <p class="backpack-title">当前阶段资产背包</p>
+            <ul id="backpackList" class="backpack-list"></ul>
+          </div>
+        </div>
+
+        <!-- 悬浮抽屉 (Drawer) 固定在右侧边缘 -->
+        <aside id="helperDrawer" class="helper-drawer is-closed" data-module="Side_Helper_Drawer">
+          <button id="drawerToggle" class="drawer-toggle" type="button" title="展开/收起工具面板">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+
+          <div class="drawer-content">
+            <div class="drawer-tabs">
+              <button class="tab-btn is-active" data-target="tab-tools">工具箱</button>
+            </div>
+
+            <div class="drawer-panels">
+              <div id="tab-tools" class="drawer-panel is-active" data-module="Side_Tools">
+                <p class="drawer-desc">保留待定功能：转场衔接生成。</p>
+                <div class="tools-list">
+                  <button class="mini-feature-card" type="button" data-feature="transition">
+                    <span class="tool-icon">⋈</span>
+                    <div class="tool-text">
+                      <h4>转场衔接生成</h4>
+                      <p>首尾帧 1-3s 自动转场</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="previewModal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-card preview-modal-card">
+        <h3>成片预览</h3>
+        <p class="modal-desc">此处为反诈主题成片预览，你可在确认后直接导出成片。</p>
+        <div class="preview-placeholder"><video src="./assets/fanzha/成片.mp4" controls preload="metadata"></video></div>
+        <div class="modal-actions">
+          <button id="exportBtn" class="primary-btn" type="button">导出成片</button>
+          <button id="previewModalClose" class="ghost-btn" type="button">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
