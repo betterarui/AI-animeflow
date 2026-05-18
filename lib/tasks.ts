@@ -8,6 +8,11 @@ type TaskEnvelope = {
   clientMessage?: string;
 };
 
+type TimedTask = {
+  taskType: string;
+  inputJson: unknown;
+};
+
 type CreateTaskInput = {
   projectId: string;
   taskType: string;
@@ -18,6 +23,47 @@ type CreateTaskInput = {
 };
 
 type CreateDeferredTaskInput = Omit<CreateTaskInput, "payload">;
+
+function asRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function numberFromInput(input: unknown, key: string, fallback: number) {
+  const value = Number(asRecord(input)[key]);
+  return Number.isFinite(value) ? Math.max(1, Math.floor(value)) : fallback;
+}
+
+function taskTimeoutMs(task: TimedTask) {
+  const input = task.inputJson;
+  const storyboardCount = numberFromInput(input, "storyboardCount", 1);
+  const assetCount = numberFromInput(input, "assetCount", 1);
+
+  switch (task.taskType) {
+    case "story":
+    case "assets":
+    case "storyboards":
+      return 3 * 60 * 1000;
+    case "review":
+      return 45 * 1000;
+    case "asset_images":
+      return Math.max(5 * 60 * 1000, assetCount * 2 * 60 * 1000);
+    case "images":
+      return Math.max(8 * 60 * 1000, storyboardCount * 2 * 60 * 1000);
+    case "videos":
+      return Math.min(2 * 60 * 60 * 1000, Math.max(45 * 60 * 1000, storyboardCount * 15 * 60 * 1000));
+    case "export":
+      return 10 * 60 * 1000;
+    default:
+      return 30 * 60 * 1000;
+  }
+}
+
+function progressForRunningTask(task: TimedTask & { progress: number }, ageMs: number) {
+  const timeoutMs = taskTimeoutMs(task);
+  const expectedMs = Math.max(30 * 1000, timeoutMs * 0.7);
+  const estimated = 18 + Math.floor(Math.min(1, ageMs / expectedMs) * 72);
+  return Math.min(90, Math.max(task.progress, estimated));
+}
 
 export async function createGenerationTask(input: CreateTaskInput) {
   return prisma.generationTask.create({
@@ -120,6 +166,24 @@ export async function advanceGenerationTask(taskId: string, userId: string) {
   }
 
   const age = Date.now() - task.createdAt.getTime();
+  const timeoutMs = taskTimeoutMs(task);
+  if (age > timeoutMs) {
+    return prisma.generationTask.update({
+      where: { id: task.id },
+      data: {
+        status: "failed",
+        errorMessage: `任务执行超时，已自动停止。请重试该 ${task.taskType} 任务。`
+      },
+      include: {
+        project: {
+          include: {
+            storyboards: { orderBy: { shotNo: "asc" } }
+          }
+        }
+      }
+    });
+  }
+
   if (age < 1200) {
     const progress = Math.min(92, Math.max(task.progress, 18 + Math.floor(age / 18)));
     return prisma.generationTask.update({
@@ -137,7 +201,7 @@ export async function advanceGenerationTask(taskId: string, userId: string) {
 
   const envelope = (task.outputJson || {}) as TaskEnvelope;
   if (!Object.prototype.hasOwnProperty.call(envelope, "payload")) {
-    const progress = Math.min(92, Math.max(task.progress, 72 + Math.floor((age - 1200) / 1500)));
+    const progress = progressForRunningTask(task, age);
     return prisma.generationTask.update({
       where: { id: task.id },
       data: { status: "running", progress },
