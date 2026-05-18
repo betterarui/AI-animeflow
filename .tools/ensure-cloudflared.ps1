@@ -56,6 +56,20 @@ function Stop-TunnelProcesses {
   }
 }
 
+function Stop-ExtraTunnelProcesses {
+  param([object[]]$Processes)
+
+  if ($Processes.Count -le 1) {
+    return
+  }
+
+  $ordered = @($Processes | Sort-Object CreationDate -Descending)
+  $keep = $ordered[0]
+  $extra = @($ordered | Select-Object -Skip 1)
+  Write-Log "multiple tunnel processes detected keep=$($keep.ProcessId) stop=$(@($extra | ForEach-Object { $_.ProcessId }) -join ',')"
+  Stop-TunnelProcesses -Processes $extra
+}
+
 function Get-LastRestartAt {
   if (-not (Test-Path -LiteralPath $stateFile)) {
     return $null
@@ -129,6 +143,7 @@ $processes = Get-TunnelProcesses
 $healthy = Test-TunnelHealthy
 
 if ($healthy) {
+  Stop-ExtraTunnelProcesses -Processes $processes
   Write-Log "tunnel is healthy"
   exit 0
 }
